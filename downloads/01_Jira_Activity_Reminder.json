@@ -1,0 +1,450 @@
+{
+  "name": "Jira Activity Reminder",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "mode": "everyWeek",
+              "weekday": "3"
+            }
+          ]
+        }
+      },
+      "name": "Wednesday 2PM Trigger",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        992,
+        -560
+      ],
+      "id": "ffe1c596-6d64-42ca-a6a6-2214a86a4583"
+    },
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "mode": "everyWeek",
+              "weekday": "4"
+            }
+          ]
+        }
+      },
+      "name": "Thursday 2PM Trigger",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        992,
+        -368
+      ],
+      "id": "00d8eda1-40dc-40a7-88c4-a2feb6990df2"
+    },
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "mode": "everyWeek",
+              "weekday": "5"
+            }
+          ]
+        }
+      },
+      "name": "Friday 2PM Trigger",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        992,
+        -160
+      ],
+      "id": "6a494ef4-ef86-48e0-a3a5-a5098c4226d5"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Determine which day this is running (Wed=3, Thu=4, Fri=5)\nconst now = new Date();\nconst dayOfWeek = now.getDay();\n\nlet dayName = \"Unknown\";\nlet reminderType = \"\";\n\nif (dayOfWeek === 3) {\n  dayName = \"Wednesday\";\n  reminderType = \"First Reminder\";\n} else if (dayOfWeek === 4) {\n  dayName = \"Thursday\";\n  reminderType = \"Second Reminder\";\n} else if (dayOfWeek === 5) {\n  dayName = \"Friday\";\n  reminderType = \"Final Reminder\";\n}\n\n// Calculate Monday 00:00 of current week\nconst mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;\nconst monday = new Date(now);\nmonday.setDate(now.getDate() + mondayOffset);\nmonday.setHours(0, 0, 0, 0);\n\n// Get week number for tracking\nconst weekNumber = Math.ceil(((now - new Date(now.getFullYear(), 0, 1)) / 86400000 + 1) / 7);\n\nreturn [\n  {\n    json: {\n      currentDay: dayName,\n      dayOfWeek: dayOfWeek,\n      reminderType: reminderType,\n      mondayDate: monday.toISOString().split('T')[0],\n      todayDate: now.toISOString().split('T')[0],\n      weekNumber: weekNumber,\n      year: now.getFullYear()\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1296,
+        -368
+      ],
+      "id": "710f7d92-0581-415e-85e7-3d3bb4853c14",
+      "name": "Set Context & Date Range"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Reporter name to email mapping\nconst reporterEmails = {\n  \"Reporter C\": \"reporter.c@example.com\",\n  \"Reporter A\": \"reporter.a@example.com\",\n  \"Reporter B\": \"reporter.b@example.com\"\n};\n\n// Boss emails for CC\nconst bossEmails = [\n  \"pm-group@example.com\",\n  \"project.manager@example.com\"\n];\n\nconst contextData = items[0].json;\n\nreturn [\n  {\n    json: {\n      ...contextData,\n      reporterEmails: reporterEmails,\n      bossEmails: bossEmails,\n      reporterNames: Object.keys(reporterEmails)\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        -368
+      ],
+      "id": "d4984ed6-8d96-4a5f-8876-67f80f088c2d",
+      "name": "Reporter Email Mapping"
+    },
+    {
+      "parameters": {
+        "url": "https://your-company.atlassian.net/rest/api/3/search/jql",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "jql",
+              "value": "={{ `updated >= \"${$json.mondayDate}\" AND assignee in (\"Reporter D\", \"Reporter C\", \"Reporter A\", \"Reporter B\") ORDER BY updated DESC` }}"
+            },
+            {
+              "name": "maxResults",
+              "value": "100"
+            },
+            {
+              "name": "fields",
+              "value": "summary,assignee,updated,status"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1904,
+        -304
+      ],
+      "id": "bc484fa2-9bb2-4222-a87d-ab157060834b",
+      "name": "Fetch Jira Activities"
+    },
+    {
+      "parameters": {
+        "jsCode": "// FIXED: Detect Inactive Reporters - Corrected Logic\nconst jiraResponse = items[0].json;\nconst issues = jiraResponse.issues || [];\n\n// Get context from previous node\nconst contextItem = $node[\"Reporter Email Mapping\"].json;\nconst allReporters = contextItem.reporterNames;\nconst reporterEmails = contextItem.reporterEmails;\n\n// Helper function: normalize names for comparison\nfunction normalizeName(name) {\n  if (!name) return '';\n  return name.toLowerCase().trim().replace(/\\s+/g, ' ');\n}\n\n// Get unique reporters who have activity (based on being assigned to updated issues)\nconst activeReportersNormalized = new Set();\n\nissues.forEach(issue => {\n  // Check the assignee field (who the issue is assigned to)\n  const assigneeName = issue.fields?.assignee?.displayName;\n  if (assigneeName) {\n    const normalized = normalizeName(assigneeName);\n    activeReportersNormalized.add(normalized);\n  }\n});\n\n// Identify inactive reporters - FIXED: Use separate loop to avoid duplicates\nconst inactiveReporters = [];\nconst activeReporters = [];\n\nallReporters.forEach(reporterName => {\n  const normalized = normalizeName(reporterName);\n  if (activeReportersNormalized.has(normalized)) {\n    activeReporters.push(reporterName);\n  } else {\n    inactiveReporters.push(reporterName);\n  }\n});\n\nreturn [\n  {\n    json: {\n      ...contextItem,\n      activeReporters: activeReporters,\n      inactiveReporters: inactiveReporters,\n      totalIssues: issues.length,\n      activitySummary: issues.map(i => ({\n        assignee: i.fields?.assignee?.displayName,\n        summary: i.fields?.summary,\n        updated: i.fields?.updated\n      }))\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2192,
+        -368
+      ],
+      "id": "5d2e69f7-9332-4917-8165-1352bc6e424d",
+      "name": "Detect Inactive Reporters"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "<GOOGLE_SHEET_ID>",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Reminder_Tracking_Log",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        2496,
+        -368
+      ],
+      "id": "b336e8da-eecd-473d-bb58-63f9effa2a59",
+      "name": "Read Reminder Log"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check who already received reminders this week\nconst sheetData = items;\nconst contextData = $node[\"Detect Inactive Reporters\"].json;\nconst inactiveReporters = contextData.inactiveReporters;\nconst currentWeek = contextData.weekNumber;\nconst currentYear = contextData.year;\n\n// Build a set of reporters who already got reminders this week\nconst remindedThisWeek = new Set();\n\nsheetData.forEach(row => {\n  const rowData = row.json;\n  if (rowData.Year == currentYear && rowData.WeekNumber == currentWeek) {\n    remindedThisWeek.add(rowData.ReporterName);\n  }\n});\n\n// Filter to only reporters who need reminders\nconst reportersNeedingReminder = inactiveReporters.filter(\n  name => !remindedThisWeek.has(name)\n);\n\n// If no one needs reminders, stop\nif (reportersNeedingReminder.length === 0) {\n  return [];\n}\n\n// Create one item per reporter needing reminder\nreturn reportersNeedingReminder.map(reporterName => ({\n  json: {\n    reporterName: reporterName,\n    reporterEmail: contextData.reporterEmails[reporterName],\n    bossEmails: contextData.bossEmails,\n    currentDay: contextData.currentDay,\n    reminderType: contextData.reminderType,\n    mondayDate: contextData.mondayDate,\n    todayDate: contextData.todayDate,\n    weekNumber: contextData.weekNumber,\n    year: contextData.year\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2800,
+        -368
+      ],
+      "id": "c64c05c6-ce55-4c78-838a-9d0013fc96b1",
+      "name": "Filter Reporters Needing Reminder"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build Email Content\nreturn items.map(item => {\n  const reporterName = item.json.reporterName;\n  const reporterEmail = item.json.reporterEmail;\n  const bossEmails = item.json.bossEmails || [];\n  const currentDay = item.json.currentDay;\n  const reminderType = item.json.reminderType;\n  const mondayDate = item.json.mondayDate;\n  const todayDate = item.json.todayDate;\n  \n  const emailSubject = `[Action Required] Weekly Activity Update - ${currentDay} ${reminderType}`;\n  \n  const emailBodyHTML = `\n    <div style=\"font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #333;\">\n      <p>Hi <strong>${reporterName}</strong>,</p>\n      \n      <p>This is a <strong>${reminderType.toLowerCase()}</strong> regarding your weekly Jira activity updates.</p>\n      \n      <p>We noticed you haven't had any assigned issues updated from <strong>Monday (${mondayDate})</strong> through today <strong>(${currentDay}, ${todayDate})</strong>.</p>\n      \n      <div style=\"background-color: #f8f9fa; border-left: 4px solid #0066cc; padding: 15px; margin: 20px 0;\">\n        <h3 style=\"margin-top: 0; color: #0066cc;\">📋 Action Required:</h3>\n        <p style=\"margin-bottom: 0;\">Please update your work activities in Jira by <strong>end of day today</strong> to ensure accurate weekly reporting.</p>\n      </div>\n      \n      <h3 style=\"color: #0066cc;\">🔍 What to update:</h3>\n      <ul style=\"margin-top: 10px;\">\n        <li>Tasks accomplished</li>\n        <li>Issues worked on</li>\n        <li>Progress on assigned tickets</li>\n        <li>Any blockers or challenges</li>\n      </ul>\n      \n      <h3 style=\"color: #0066cc;\">❓ Need Help?</h3>\n      <p>If you have any questions about logging activities or if there are extenuating circumstances, please reach out directly.</p>\n      \n      <p style=\"margin-top: 30px;\">Thank you for your prompt attention to this matter.</p>\n      \n      <p style=\"margin-top: 20px;\">\n        <strong>Best regards,</strong><br>\n        Data Team Management\n      </p>\n      \n      <hr style=\"border: none; border-top: 1px solid #ddd; margin: 30px 0;\">\n      <p style=\"font-size: 12px; color: #777;\">\n      </p>\n    </div>\n  `;\n\n  return {\n    json: {\n      reporterName: reporterName,\n      reporterEmail: reporterEmail,\n      bossEmails: bossEmails,\n      emailSubject: emailSubject,\n      emailBodyHTML: emailBodyHTML,\n      ccEmails: bossEmails.join(','),\n      currentDay: currentDay,\n      reminderType: reminderType,\n      mondayDate: mondayDate,\n      todayDate: todayDate,\n      weekNumber: item.json.weekNumber,\n      year: item.json.year\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3104,
+        -368
+      ],
+      "id": "6d712626-04b1-4bec-b1f3-f301cd3e6647",
+      "name": "Build Email Content"
+    },
+    {
+      "parameters": {
+        "fromEmail": "reminders@example.com",
+        "toEmail": "={{ $json.reporterEmail }}",
+        "subject": "={{ $json.emailSubject }}",
+        "html": "={{ $json.emailBodyHTML }}",
+        "options": {
+          "appendAttribution": false,
+          "ccEmail": "={{ $json.ccEmails }}"
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        3408,
+        -368
+      ],
+      "id": "5196bae7-dd19-462b-8a97-625854345fba",
+      "name": "Send Reminder Email"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "<GOOGLE_SHEET_ID>",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Reminder_Tracking_Log",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ReporterName": "={{ $('Build Email Content').item.json.reporterName }}",
+            "Year": "={{ $('Build Email Content').item.json.year }}",
+            "WeekNumber": "={{ $('Build Email Content').item.json.weekNumber }}",
+            "ReminderDay": "={{ $('Build Email Content').item.json.currentDay }}",
+            "ReminderType": "={{ $('Build Email Content').item.json.reminderType }}",
+            "DateSent": "={{ $('Build Email Content').item.json.todayDate }}",
+            "EmailSent": "={{ $('Build Email Content').item.json.reporterEmail }}",
+            "TimestampUTC": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "ReporterName",
+              "displayName": "ReporterName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Year",
+              "displayName": "Year",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "WeekNumber",
+              "displayName": "WeekNumber",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ReminderDay",
+              "displayName": "ReminderDay",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ReminderType",
+              "displayName": "ReminderType",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "DateSent",
+              "displayName": "DateSent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "EmailSent",
+              "displayName": "EmailSent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "TimestampUTC",
+              "displayName": "TimestampUTC",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        3712,
+        -368
+      ],
+      "id": "41ae7bf0-96f1-462c-979c-de0d9cf6b064",
+      "name": "Log Reminder Sent"
+    }
+  ],
+  "connections": {
+    "Wednesday 2PM Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set Context & Date Range",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Thursday 2PM Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set Context & Date Range",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Friday 2PM Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set Context & Date Range",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Context & Date Range": {
+      "main": [
+        [
+          {
+            "node": "Reporter Email Mapping",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reporter Email Mapping": {
+      "main": [
+        [
+          {
+            "node": "Fetch Jira Activities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Jira Activities": {
+      "main": [
+        [
+          {
+            "node": "Detect Inactive Reporters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detect Inactive Reporters": {
+      "main": [
+        [
+          {
+            "node": "Read Reminder Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Reminder Log": {
+      "main": [
+        [
+          {
+            "node": "Filter Reporters Needing Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Reporters Needing Reminder": {
+      "main": [
+        [
+          {
+            "node": "Build Email Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Email Content": {
+      "main": [
+        [
+          {
+            "node": "Send Reminder Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Reminder Email": {
+      "main": [
+        [
+          {
+            "node": "Log Reminder Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

@@ -1,0 +1,621 @@
+{
+  "name": "Jira to AI Weekly Report",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "mode": "everyWeek",
+              "hour": 5,
+              "minute": 30,
+              "weekday": "6"
+            }
+          ]
+        }
+      },
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        -2976,
+        976
+      ],
+      "id": "ba70ccd2-9e2f-49b7-93a6-8a1b8e1fc583"
+    },
+    {
+      "parameters": {
+        "url": "https://your-company.atlassian.net/rest/api/3/project/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2752,
+        976
+      ],
+      "id": "55c19341-1c65-4044-a890-079833249c11",
+      "name": "Jira Fetch Project"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items[0].json.values.map(project => ({\n  json: {\n    key: project.key,\n    name: project.name\n  }\n}));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2528,
+        976
+      ],
+      "id": "a6ddfb22-330d-49c3-9dd6-dfcee55db501",
+      "name": "Relevant Project Extraction"
+    },
+    {
+      "parameters": {
+        "functionCode": "return items.map(item => {\n  const key = item.json.key;\n  const name = item.json.name;\n  let category = \"Uncategorized\";\n\n  if (key.startsWith(\"IS\")) category = \"Data Team\";\n  else if (key.startsWith(\"Company\")) category = \"Internal Projects\";\n  else if (key.startsWith(\"AD\") || key.startsWith(\"Program BO\")) category = \"Administrative\";\n  else if (key.startsWith(\"NPR\")) category = \"Program A Projects\";\n\n  return {\n    json: {\n      projectKey: key,\n      projectName: name,\n      category\n    }\n  };\n});\n"
+      },
+      "name": "Categorize Projects",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        -2304,
+        976
+      ],
+      "id": "e24e4546-c78f-4a67-9f86-1c8dfe691c95"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.filter(item =>\n  ['Data Team'].includes(item.json.projectName)\n);\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2080,
+        976
+      ],
+      "id": "1fe248d3-f8e3-4424-b795-8265d1569010",
+      "name": "Data Team Board extract"
+    },
+    {
+      "parameters": {
+        "url": "https://your-company.atlassian.net/rest/api/3/search/jql",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "jql",
+              "value": "={{ `project = ${$json.projectKey} AND status in (\"Reporter A Project Tracker\",\"Reporter C Project Tracker\",\"REPORTER B PROJECT TRACKER\",\"REPORTER D PROJECT TRACKER\") ORDER BY updated DESC` }}"
+            },
+            {
+              "name": "maxResults",
+              "value": "100"
+            },
+            {
+              "name": "fields",
+              "value": "summary,issuetype,updated,created,assignee,reporter,status,priority,description,comment,worklogs,customfield_10290,customfield_10291,customfield_10292,customfield_10293,customfield_10294,customfield_10295,customfield_10296,customfield_10297,customfield_10298,customfield_10299"
+            },
+            {
+              "name": "expand",
+              "value": "changelog"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1856,
+        976
+      ],
+      "id": "be06c968-ec8a-4bbb-9262-586eac2f13b9",
+      "name": "Fetch Jira Issue"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Person → project mapping (Program A vs Program B)\n// Reporter C is on Program B. Everyone else is on Program A.\nconst PROGRAM_B_ASSIGNEES = new Set([\n  'reporter c'\n]);\n\n// Status → true owner (for the owner tracker which is assigned to Reporter B)\n// REPORTER D PROJECT TRACKER tickets are owned by Reporter D (the reporter),\n// not the assignee (Reporter B who manages them).\nconst OWNER_TRACKER_STATUS = 'reporter d project tracker';\n\nconst res = items[0].json || {};\nconst issues = res.issues || [];\n\nconst out = [];\nfor (const issue of issues) {\n  const f = issue.fields || {};\n  const statusName = (f.status?.name || '').toLowerCase();\n  const assigneeName = (f.assignee?.displayName || '').toLowerCase();\n\n  // Determine true reporter\n  let reporter;\n  if (statusName === OWNER_TRACKER_STATUS) {\n    // Reporter D's tracker: reporter field = Reporter D (ticket creator = the worker)\n    reporter = f.reporter?.displayName || 'Reporter D';\n  } else {\n    reporter = f.assignee?.displayName || null;\n  }\n\n  if (!reporter) continue; // skip unassigned tickets entirely\n\n  // Skip Project Manager as reporter\n  if (reporter.toLowerCase().includes('project manager')) continue;\n\n  // Determine program line\n  const isProgramB = PROGRAM_B_ASSIGNEES.has(assigneeName);\n  const programLine = isProgramB\n    ? 'Program: Program B Operations & Maintenance Support'\n    : 'Program: Program A Operations & Maintenance Support';\n\n  out.push({\n    json: {\n      // Pass the full issue fields through — no second API call needed\n      issueKey: issue.key,\n      summary: f.summary || '',\n      status: f.status?.name || '',\n      reporter: reporter,\n      programLine: programLine,\n      fields: f,\n      changelog: issue.changelog || {}\n    }\n  });\n}\n\nconsole.log(`[Flatten] ${issues.length} issues → ${out.length} valid items`);\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1632,
+        976
+      ],
+      "id": "c0d71be5-aa24-4af3-bf50-c2004743da37",
+      "name": "Flatten Issue List"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Pass-through: full issue data already included from Flatten Issue List.\n// No second API call needed. Runs once for all items.\nreturn items;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1408,
+        976
+      ],
+      "id": "c8519217-b243-4c58-b6fd-a20d5f699059",
+      "name": "Get Issue activities",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Keep only tickets that have at least one comment from THIS week.\n// \"This week\" = Mon 00:00 → Fri 23:59 America/New_York.\n// Tickets with zero this-week comments are silently skipped.\n\nconst EST_OFFSET_MS = 5 * 60 * 60 * 1000; // UTC-5 (EST; close enough for weekly cadence)\n\nfunction toESTMidnightUTC(utcMs) {\n  const estMs = utcMs - EST_OFFSET_MS;\n  const midnight = estMs - (estMs % 86400000);\n  return midnight + EST_OFFSET_MS;\n}\n\nconst nowUTC = Date.now();\nconst estDow = new Date(nowUTC - EST_OFFSET_MS).getUTCDay(); // 0=Sun\nconst daysToMonday = estDow === 0 ? -6 : 1 - estDow;\n\nconst mondayUTC = toESTMidnightUTC(nowUTC) + daysToMonday * 86400000;\nconst fridayUTC  = mondayUTC + 4 * 86400000 + 23 * 3600000 + 59 * 60000 + 59999;\n\nfunction isThisWeek(dateStr) {\n  if (!dateStr) return false;\n  const ms = new Date(dateStr).getTime();\n  return ms >= mondayUTC && ms <= fridayUTC;\n}\n\n// Extract plain text from ADF comment body\nfunction adfToText(body) {\n  if (!body) return '';\n  if (typeof body === 'string') return body;\n  const parts = [];\n  function walk(node) {\n    if (!node) return;\n    if (node.type === 'text') parts.push(node.text || '');\n    if (node.type === 'date') {\n      // Convert timestamp to readable date\n      const ts = node.attrs?.timestamp;\n      if (ts) parts.push(new Date(parseInt(ts)).toISOString().split('T')[0]);\n    }\n    (node.content || []).forEach(walk);\n  }\n  walk(body);\n  return parts.join(' ').replace(/\\s+/g, ' ').trim();\n}\n\nconst filtered = [];\n\nfor (const item of items) {\n  const f = item.json.fields || {};\n  const comments = (f.comment?.comments || []);\n\n  // Find comments from this week\n  const thisWeekComments = comments.filter(c =>\n    isThisWeek(c.created) || isThisWeek(c.updated)\n  );\n\n  if (thisWeekComments.length === 0) {\n    console.log(`[Filter] SKIP ${item.json.issueKey} — no this-week comments`);\n    continue;\n  }\n\n  // Attach extracted this-week comment texts for the AI\n  const thisWeekTexts = thisWeekComments.map(c => ({\n    author: c.author?.displayName || 'Unknown',\n    date: (c.created || '').split('T')[0],\n    text: adfToText(c.body)\n  }));\n\n  // Also extract custom field values (structured report fields)\n  const customFields = {};\n  for (let i = 290; i <= 299; i++) {\n    const key = `customfield_1${i}`;\n    const val = f[key];\n    if (val && typeof val === 'string' && val.trim()) {\n      customFields[key] = val.trim();\n    } else if (val && typeof val === 'object') {\n      const text = adfToText(val);\n      if (text) customFields[key] = text;\n    }\n  }\n\n  filtered.push({\n    json: {\n      ...item.json,\n      thisWeekComments: thisWeekTexts,\n      customFields: customFields,\n      totalComments: comments.length\n    }\n  });\n}\n\nconsole.log(`[Filter] ${items.length} tracker tickets → ${filtered.length} with this-week activity`);\nreturn filtered;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1184,
+        976
+      ],
+      "id": "5967027b-1b8c-4d9e-b2da-540422668aca",
+      "name": "This Week report Filter2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build Boss Summary from filtered Jira activity items\nconst clean = (s) => String(s ?? '').trim();\n\nfunction getReporterName(item) {\n  const f = item.json?.fields || item.json || {};\n  return (\n    clean(f.reporter?.displayName) ||\n    clean(f.reporter?.name) ||\n    clean(f.updateAuthor?.displayName) ||\n    clean(f.author?.displayName) ||\n    clean(item.json?.reporter) ||\n    'Unknown'\n  );\n}\n\nconst counts = new Map();\nfor (const it of items) {\n  const name = getReporterName(it);\n  counts.set(name, (counts.get(name) || 0) + 1);\n}\n\nconst sorted = [...counts.entries()]\n  .filter(([name]) => name !== 'Unknown')\n  .sort((a,b) => b[1] - a[1]);\n\nconst lines = sorted.length\n  ? sorted.map(([name, n]) => `• ${name} — ${n} item(s)`).join('\\n')\n  : 'No activity found for this week (per filter).';\n\nconst subject = `Weekly Tracker Update — ${sorted.length} active team member(s)`;\nconst body = `Hi manager,\\n\\nHere's who logged activity on their board tracker this week:\\n\\n${lines}\\n\\n— Automated Jira → Weekly Report workflow`.trim();\n\nreturn [{ json: { subject, body, activeCount: sorted.length, activeMembers: sorted.map(([n]) => n) } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1216,
+        704
+      ],
+      "id": "bdbf8bf6-d557-4e70-96f2-997aef8d3c98",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "fromEmail": "project.manager@example.com",
+        "toEmail": "manager@example.com",
+        "bccEmail": "project.manager@example.com",
+        "subject": "={{ $json.subject }}",
+        "text": "={{ $json.body }} {{ $json.activeCount }}",
+        "attachments": [],
+        "options": {}
+      },
+      "name": "Send Weekly Kickoff Email1",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [
+        -992,
+        720
+      ],
+      "id": "535a263e-587c-46d6-9db2-ec70534a1200"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a professional report writer for a managed IT support contract.\n\nYour job is to read a Jira ticket and produce a structured Weekly Activity Report for the ASSIGNEE.\n\n════════════════════════════════════════════════\nCRITICAL RULES — READ BEFORE ANYTHING ELSE\n════════════════════════════════════════════════\n\n1. REPORTER = The ASSIGNEE of the ticket (fields.assignee.displayName).\n   - Project Manager is the PROJECT MANAGER. She DOCUMENTS others' work. She is NEVER the reporter.\n   - If assignee is null or \"Project Manager\" → return {\"reporter\": \"N/A\"} and nothing else.\n\n2. THIS WEEK ONLY — The input includes a \"thisWeekComments\" array containing ONLY the comments posted this week. These are your PRIMARY SOURCE. Do NOT use older comments from fields.comment.comments for content (they are historical). You may reference the ticket summary and description for context only.\n\n3. PROGRAM LINE — The input includes \"programLine\". Use it exactly as provided. Do NOT use a generic program line.\n\n4. TWO COMMENT STYLES exist on this board:\n   - STYLE A — Project Manager's narrative prose (for Reporter A, Reporter B): She writes paragraph-style updates that mix activities, issues, risks, and next steps in one block. You must CLASSIFY each sentence into the correct report field.\n   - STYLE B — Self-logged activity notes (for Reporter C): Very short technical one-liners like \"202BAR Crystal sub report development in SSRS\". These go into activitiesPerformed ONLY. issuesChallenges, risksVulnerabilities, supportNeeds will be N/A unless explicitly written.\n\n5. ONE BULLET PER DISTINCT FACT. Keep each bullet under 20 words. If a sentence has two facts, split them into two bullets.\n\n6. TICKET TITLE RULE: The ticket summary (e.g. \"HUB patching\", \"SPLUNK Configuration\") MUST appear as context in at least one activitiesPerformed bullet to make the report specific. Format: \"• [Ticket area]: [what happened]\"\n\n════════════════════════════════════════════════\nOUTPUT FORMAT — STRICT JSON ONLY\n════════════════════════════════════════════════\nReturn ONLY valid JSON with these exact keys in this order:\n{\n  \"reportTitle\": \"Weekly Activity Report\",\n  \"programLine\": \"<use input programLine exactly>\",\n  \"reporter\": \"<assignee displayName>\",\n  \"weekEnding\": \"\",\n  \"activitiesPerformed\": \"<bullets>\",\n  \"tasksAccomplished\": \"<bullets or N/A>\",\n  \"issuesChallenges\": \"<bullets or N/A>\",\n  \"risksVulnerabilities\": \"<bullets or N/A>\",\n  \"processImprovementOpportunities\": \"N/A\",\n  \"supportNeeds\": \"<bullets or N/A>\",\n  \"upcomingWeekActivities\": \"<bullets>\",\n  \"plannedLeave\": \"N/A\"\n}\n\nNo markdown. No extra keys. No explanation text outside JSON.\n\n════════════════════════════════════════════════\nFIELD EXTRACTION GUIDE\n════════════════════════════════════════════════\n\nactivitiesPerformed:\n  - Start with: \"• [Ticket summary area]: [what was done this week]\"\n  - Add bullets for each distinct activity found in thisWeekComments\n  - For Style B (Reporter C): each comment = one activity bullet, prefixed with the ticket area\n\ntasksAccomplished:\n  - ONLY things explicitly completed, finished, installed, resolved, or deployed this week\n  - Look for: \"installed\", \"completed\", \"resolved\", \"up to date\", \"fully resolved\", \"patched\"\n  - Do NOT infer completion. If not stated → N/A\n\nissuesChallenges:\n  - Blockers, delays, things \"on hold\", \"waiting on\", \"pending\", \"fell through\", \"blocked\"\n  - Only from thisWeekComments. If none → N/A\n\nrisksVulnerabilities:\n  - Risk language: \"risk\", \"single point of failure\", \"still pending\", \"may impact\", \"blocked on\"\n  - Only if explicitly stated. If none → N/A\n\nsupportNeeds:\n  - Explicit requests: \"need\", \"require\", \"waiting on team\", \"management support needed\"\n  - If none → N/A\n\nupcomingWeekActivities:\n  - Explicit next steps: \"next week\", \"scheduled for\", \"will\", \"pending\", \"once [X] is done\"\n  - If none found → \"• Continue routine operational support and planned work activities.\"\n\nplannedLeave:\n  - Any mention of time off, leave, vacation, PTO\n  - If none → N/A\n\n════════════════════════════════════════════════\nINPUT DATA\n════════════════════════════════════════════════\nTicket key: {{ $json.issueKey }}\nTicket summary: {{ $json.summary }}\nReporter (assignee): {{ $json.reporter }}\nProgram line: {{ $json.programLine }}\nStatus: {{ $json.status }}\n\nThis week's comments:\n{{ JSON.stringify($json.thisWeekComments) }}\n\nReturn the JSON now.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -960,
+        1136
+      ],
+      "id": "78b67d1c-4cbb-4808-a27d-221ab6a32afe",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -880,
+        1360
+      ],
+      "id": "d143899d-c0bb-47d9-87cb-faeafe9d7f91",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst EXCLUDED = new Set(['project manager', 'n/a', '', 'unknown']);\n\nconst FIELDS = [\n  'activitiesPerformed','tasksAccomplished','issuesChallenges',\n  'risksVulnerabilities','processImprovementOpportunities',\n  'supportNeeds','upcomingWeekActivities','plannedLeave'\n];\n\nfunction weekEndingNY() {\n  const TZ = 'America/New_York';\n  const nowNY = new Date(new Date().toLocaleString('en-US', { timeZone: TZ }));\n  const dow = nowNY.getDay();\n  const toFri = dow === 0 ? -2 : (5 - dow + 7) % 7 || 0;\n  const fri = new Date(nowNY);\n  fri.setDate(nowNY.getDate() + toFri);\n  return [fri.getFullYear(),\n          String(fri.getMonth()+1).padStart(2,'0'),\n          String(fri.getDate()).padStart(2,'0')].join('-');\n}\nconst WEEK_ENDING = weekEndingNY();\n\nfunction parseJSON(raw) {\n  if (raw && typeof raw === 'object' && !Array.isArray(raw)) return raw;\n  let s = typeof raw === 'string' ? raw : '';\n  s = s.replace(/^```(?:json)?/i,'').replace(/```$/,'').trim();\n  try { return JSON.parse(s); } catch {}\n  const m = s.match(/\\{[\\s\\S]*\\}/);\n  if (m) try { return JSON.parse(m[0]); } catch {}\n  return {};\n}\n\nfunction splitBullets(text) {\n  if (!text || String(text).trim().toLowerCase() === 'n/a') return [];\n  return String(text)\n    .replace(/\\r/g, '')\n    // Split on newlines AND inline bullet chars\n    .split(/\\n|(?<=\\S)\\s*[•·\\u2022]\\s*/)\n    .map(l => l.replace(/^[\\s•·\\u2022\\-\\*,]+/, '').trim())\n    .filter(l => l && l.toLowerCase() !== 'n/a');\n}\n\n// Strip the \"TicketArea: \" prefix for comparison purposes only\nfunction stripPrefix(s) {\n  return s.replace(/^[A-Z][A-Za-z0-9 &\\-\\/]+:\\s*/, '').toLowerCase().trim();\n}\n\nconst STOPWORDS = new Set('a an the and or but in on at to for of with is are was were be been have has had do does did will would could should may might this that these those it its by from as'.split(' '));\n\nfunction sigWords(s) {\n  return new Set(\n    stripPrefix(s)\n      .replace(/[^a-z0-9 ]/g,' ')\n      .split(/\\s+/)\n      .filter(w => w.length > 2 && !STOPWORDS.has(w))\n  );\n}\n\nfunction overlap(a, b) {\n  const wa = sigWords(a), wb = sigWords(b);\n  if (!wa.size || !wb.size) return 0;\n  let shared = 0;\n  for (const w of wa) if (wb.has(w)) shared++;\n  return shared / Math.min(wa.size, wb.size);\n}\n\nfunction dedup(bullets) {\n  const result = [];\n  for (const b of bullets) {\n    let isDupe = false;\n    for (let i = 0; i < result.length; i++) {\n      if (result[i].toLowerCase() === b.toLowerCase()) { isDupe = true; break; }\n      if (overlap(b, result[i]) >= 0.65) {\n        // Keep the longer (more informative) bullet\n        if (b.length > result[i].length) result[i] = b;\n        isDupe = true; break;\n      }\n    }\n    if (!isDupe) result.push(b);\n  }\n  return result;\n}\n\nconst groups = new Map();\n\nfor (const item of items) {\n  const src = parseJSON(item.json?.output !== undefined ? item.json.output : item.json);\n  const reporter = (src.reporter || '').trim();\n  if (!reporter || EXCLUDED.has(reporter.toLowerCase())) continue;\n\n  const key = reporter.toLowerCase();\n  if (!groups.has(key)) {\n    groups.set(key, {\n      reporter,\n      reportTitle: src.reportTitle || 'Weekly Activity Report',\n      programLine: src.programLine || 'Program: Operations & Maintenance Support',\n      bullets: Object.fromEntries(FIELDS.map(f => [f, []]))\n    });\n  }\n\n  const g = groups.get(key);\n  if (src.programLine && !src.programLine.includes('Program B Operations')) {\n    g.programLine = src.programLine;\n  }\n\n  for (const f of FIELDS) {\n    const bullets = splitBullets(src[f]);\n    g.bullets[f].push(...bullets);\n  }\n}\n\nconst out = [];\nfor (const g of groups.values()) {\n  const row = {\n    reportTitle: g.reportTitle,\n    programLine: g.programLine,\n    reporter:    g.reporter,\n    weekEnding:  WEEK_ENDING\n  };\n  for (const f of FIELDS) {\n    const deduped = dedup(g.bullets[f]);\n    row[f] = deduped.length ? deduped.join('\\n') : 'N/A';\n  }\n  out.push({ json: row });\n}\n\nconsole.log('[Summarize] reporters:', out.map(i => i.json.reporter).join(', '));\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -608,
+        1136
+      ],
+      "id": "3fda5d52-7680-4700-ae1c-feaa7f621cec",
+      "name": "Summarize by Reporter"
+    },
+    {
+      "parameters": {
+        "jsCode": "{\n/* -------- Confluence targets -------- */\nconst SPACE_KEY = '<CONFLUENCE_SPACE_KEY>';\nconst PARENT_ID = 0 /* parent page id */;\n\nconst esc = s => String(s ?? 'N/A')\n  .replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');\n\nconst norm = s => String(s ?? 'N/A').replace(/\\r/g,'').trim() || 'N/A';\nconst reporterSafe = r => (norm(r.reporter).toUpperCase() === 'UNKNOWN' ? 'N/A' : norm(r.reporter));\n\nconst runSuffix = () => String(Date.now());\nconst makeTitle = r => `Weekly Activity Report - ${norm(r.weekEnding)} — ${reporterSafe(r)} #${runSuffix()}`;\n\nconst toList = (val) => {\n  const raw = String(val ?? '').replace(/\\r/g,'').trim();\n  if (!raw || raw.toLowerCase() === 'n/a') return 'N/A';\n  if (/<\\s*(ul|ol|li)\\b/i.test(raw)) return raw;\n  const parts = raw\n    .replace(/\\u2022/g, '•')\n    .split(/\\n+/)\n    .map(s => s.trim())\n    // Strip ALL leading bullet/dash chars — fixes double-bullet problem\n    .map(s => s.replace(/^[\\s•·\\u2022\\-\\*]+/, '').trim())\n    .filter(Boolean)\n    .filter(s => s.toLowerCase() !== 'n/a');\n  if (!parts.length) return 'N/A';\n  return `<ul>${parts.map(p => `<li>${esc(p)}</li>`).join('')}</ul>`;\n};\n\nconst makeBody = r => `\n<h1 style=\"margin: 10px 0 18px 0; font-size: 34px; font-weight: 700; color:#4a4036;\">\n  ${esc(r.reportTitle || 'Weekly Activity Report')}\n</h1>\n<div style=\"margin: 0 0 10px 0;\">\n  <div style=\"font-size: 16px; line-height: 1.4;\">\n    <span style=\"color:#0b62d6; font-weight:700;\">${esc(r.programLine || 'Program: Operations & Maintenance Support')}</span>\n  </div>\n  <div style=\"border-bottom: 1px solid #cfcfcf; margin-top: 10px;\"></div>\n</div>\n<div style=\"margin: 16px 0 14px 0; font-size: 15px; line-height: 1.35;\">\n  <div><span style=\"color:#0b62d6; font-weight:700;\">Week Ending:</span> <span style=\"color:#0b62d6; font-weight:700;\">${esc(norm(r.weekEnding))}</span></div>\n</div>\n<div style=\"border-bottom: 1px solid #cfcfcf; margin: 10px 0 0 0;\"></div>\n<table data-layout=\"default\" style=\"width:100%; border-collapse:collapse; margin-top: 0;\">\n  <tbody>\n    <tr><td style=\"width:28%;border-right:1px solid #cfcfcf;border-bottom:1px solid #cfcfcf;padding:16px 10px;text-align:center;vertical-align:middle;\"><div style=\"font-weight:700;color:#4a4036;\">Activities Performed</div></td><td style=\"width:72%;border-bottom:1px solid #cfcfcf;padding:16px 14px;vertical-align:top;font-size:13.5px;color:#333;\">${toList(r.activitiesPerformed)}</td></tr>\n    <tr><td style=\"width:28%;border-right:1px solid #cfcfcf;border-bottom:1px solid #cfcfcf;padding:16px 10px;text-align:center;vertical-align:middle;\"><div style=\"font-weight:700;color:#4a4036;\">Key Task/<br/>Accomplishments</div></td><td style=\"width:72%;border-bottom:1px solid #cfcfcf;padding:16px 14px;vertical-align:top;font-size:13.5px;color:#333;\">${toList(r.tasksAccomplished)}</td></tr>\n    <tr><td style=\"width:28%;border-right:1px solid #cfcfcf;border-bottom:1px solid #cfcfcf;padding:16px 10px;text-align:center;vertical-align:middle;\"><div style=\"font-weight:700;color:#4a4036;\">Issues &amp; Challenges<br/>or work-related<br/>concerns</div></td><td style=\"width:72%;border-bottom:1px solid #cfcfcf;padding:16px 14px;vertical-align:top;font-size:13.5px;color:#333;\">${toList(r.issuesChallenges)}</td></tr>\n    <tr><td style=\"width:28%;border-right:1px solid #cfcfcf;border-bottom:1px solid #cfcfcf;padding:16px 10px;text-align:center;vertical-align:middle;\"><div style=\"font-weight:700;color:#4a4036;\">Risks or<br/>Vulnerabilities</div></td><td style=\"width:72%;border-bottom:1px solid #cfcfcf;padding:16px 14px;vertical-align:top;font-size:13.5px;color:#333;\">${toList(r.risksVulnerabilities)}</td></tr>\n    <tr><td style=\"width:28%;border-right:1px solid #cfcfcf;border-bottom:1px solid #cfcfcf;padding:16px 10px;text-align:center;vertical-align:middle;\"><div style=\"font-weight:700;color:#4a4036;\">Iterative<br/>Modernization<br/>and/or Process<br/>Improvement<br/>Opportunities</div></td><td style=\"width:72%;border-bottom:1px solid #cfcfcf;padding:16px 14px;vertical-align:top;font-size:13.5px;color:#333;\">${toList(r.processImprovementOpportunities)}</td></tr>\n    <tr><td style=\"width:28%;border-right:1px solid #cfcfcf;border-bottom:1px solid #cfcfcf;padding:16px 10px;text-align:center;vertical-align:middle;\"><div style=\"font-weight:700;color:#4a4036;\">Additional Training,<br/>Tools and/or Support<br/>Needs</div></td><td style=\"width:72%;border-bottom:1px solid #cfcfcf;padding:16px 14px;vertical-align:top;font-size:13.5px;color:#333;\">${toList(r.supportNeeds)}</td></tr>\n    <tr><td style=\"width:28%;border-right:1px solid #cfcfcf;border-bottom:1px solid #cfcfcf;padding:16px 10px;text-align:center;vertical-align:middle;\"><div style=\"font-weight:700;color:#4a4036;\">Upcoming Activities<br/>for next week</div></td><td style=\"width:72%;border-bottom:1px solid #cfcfcf;padding:16px 14px;vertical-align:top;font-size:13.5px;color:#333;\">${toList(r.upcomingWeekActivities)}</td></tr>\n    <tr><td style=\"width:28%;border-right:1px solid #cfcfcf;border-bottom:1px solid #cfcfcf;padding:16px 10px;text-align:center;vertical-align:middle;\"><div style=\"font-weight:700;color:#4a4036;\">Planned Leave</div></td><td style=\"width:72%;border-bottom:1px solid #cfcfcf;padding:16px 14px;vertical-align:top;font-size:13.5px;color:#333;\">${toList(r.plannedLeave)}</td></tr>\n  </tbody>\n</table>`.trim();\n\nreturn $input.all().map(({ json: r }) => {\n  const pageTitle = makeTitle(r);\n  return {\n    json: {\n      _meta: { spaceKey: SPACE_KEY, parentId: PARENT_ID, title: pageTitle },\n      type: 'page',\n      title: pageTitle,\n      space: { key: SPACE_KEY },\n      ancestors: [{ id: PARENT_ID }],\n      body: { storage: { value: makeBody(r), representation: 'storage' } }\n    }\n  };\n});\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -560,
+        1344
+      ],
+      "id": "2feaf6e2-5d76-492d-9867-b8352ccb7a10",
+      "name": "Shape for Confluence"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://your-company.atlassian.net/wiki/rest/api/content",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -576,
+        1584
+      ],
+      "id": "18c8aa2f-4c9d-477f-80b1-3118874266ce",
+      "name": "Post To confluence"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst EXCLUDED = ['n/a', '', 'unknown'];\nconst formatted_reports = [];\n\nfunction parseIfString(val) {\n  if (!val) return {};\n  if (typeof val === 'object' && !Array.isArray(val)) return val;\n  let s = String(val).replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();\n  try { return JSON.parse(s); } catch {}\n  const m = s.match(/\\{[\\s\\S]*\\}/);\n  if (m) { try { return JSON.parse(m[0]); } catch {} }\n  return {};\n}\n\nfunction splitAndClean(text) {\n  if (!text || String(text).trim().toLowerCase() === 'n/a') return 'N/A';\n\n  const raw = String(text).replace(/\\r/g, '');\n\n  // Split on newline OR on an inline bullet char that follows a word boundary\n  // This catches both \"\\n• item\" and \"sentence,• item\" patterns\n  const lines = raw\n    .split(/\\n|(?<=\\S)\\s*[•·\\u2022]\\s*/)\n    .map(l => l.replace(/^[\\s•·\\u2022\\-\\*,]+/, '').trim())\n    .filter(l => l.length > 0 && l.toLowerCase() !== 'n/a');\n\n  return lines.length ? lines.join('\\n') : 'N/A';\n}\n\nfor (const item of items) {\n  let data = item.json || {};\n\n  if (!data.activitiesPerformed && data.output) {\n    const parsed = parseIfString(data.output);\n    if (parsed.reporter) data = { ...data, ...parsed };\n  }\n\n  const reporterNorm = (data.reporter || '').trim().toLowerCase();\n  if (EXCLUDED.includes(reporterNorm)) continue;\n\n  console.log(`[Format Table] Processing: ${data.reporter}`);\n\n  formatted_reports.push({\n    json: {\n      reportTitle: data.reportTitle || 'Weekly Activity Report',\n      programLine: data.programLine || 'Program: Operations & Maintenance Support',\n      reporter:    data.reporter,\n      weekEnding:  data.weekEnding || new Date().toISOString().split('T')[0],\n      sections: [\n        { label: 'Activities Performed',                                               content: splitAndClean(data.activitiesPerformed) },\n        { label: 'Key Task/\\nAccomplishments',                                         content: splitAndClean(data.tasksAccomplished) },\n        { label: 'Issues & Challenges or\\nwork-related concerns',                      content: splitAndClean(data.issuesChallenges) },\n        { label: 'Risks or Vulnerabilities',                                           content: splitAndClean(data.risksVulnerabilities) },\n        { label: 'Iterative Modernization\\nand/or Process\\nImprovement Opportunities', content: splitAndClean(data.processImprovementOpportunities) },\n        { label: 'Additional Training,\\nTools and/or Support Needs',                   content: splitAndClean(data.supportNeeds) },\n        { label: 'Upcoming Activities\\nfor next week',                                 content: splitAndClean(data.upcomingWeekActivities) },\n        { label: 'Planned Leave',                                                      content: splitAndClean(data.plannedLeave) }\n      ]\n    }\n  });\n}\n\nconsole.log(`[Format Table] Output: ${formatted_reports.length} reports`);\nreturn formatted_reports;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -112,
+        1056
+      ],
+      "id": "74020fc3-0207-4639-9fb2-d4784344a2f6",
+      "name": "Format Table Data for Email DOCX"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst META_PATTERNS = [\n  /worklog evidence not provided/i,\n  /status moves? not provided/i,\n  /no worklog entries?/i,\n  /no changelog/i,\n  /not provided\\s*$/i,\n];\n\nfunction isMetaNote(line) {\n  return META_PATTERNS.some(p => p.test(line));\n}\n\nfunction buildHTML(report) {\n  const CSS = `\n    @page { margin: 30px 40px; }\n    body { font-family: Calibri, Arial, sans-serif; margin: 40px; font-size: 11pt; }\n    h1 { text-align: center; font-size: 15pt; margin-bottom: 8px; color: #1F3864; }\n    .subtitle { color: #2E75B6; font-size: 10pt; text-align: center; margin-bottom: 4px; }\n    .divider { border: none; border-top: 1px solid #BDD7EE; margin: 8px 0; }\n    .info { font-size: 10pt; margin: 4px 0; }\n    .info .label { color: #2E75B6; font-weight: bold; }\n    table { width: 100%; border-collapse: collapse; margin-top: 16px; }\n    td { border: 1px solid #BDD7EE; padding: 8px 12px; font-size: 10pt; vertical-align: top; }\n    .row-label { background: #DEEAF1; font-weight: bold; width: 33%; text-align: center;\n                 vertical-align: middle; color: #1F3864; font-size: 9.5pt; line-height: 1.4; }\n    .row-content { width: 67%; }\n    ul { margin: 0; padding-left: 16px; }\n    li { margin-bottom: 3px; line-height: 1.5; }\n  `;\n\n  const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');\n\n  // Use sections[] built by Format Table node\n  const rows = (report.sections || []).map(section => {\n    const raw = String(section.content ?? 'N/A');\n    let cellHtml;\n\n    if (raw.trim().toLowerCase() === 'n/a') {\n      cellHtml = 'N/A';\n    } else {\n      const lines = raw.split('\\n')\n        .map(l => l.replace(/^[\\s•·\\u2022\\-\\*]+/, '').trim())\n        .filter(l => l && l.toLowerCase() !== 'n/a' && !isMetaNote(l));\n\n      cellHtml = lines.length\n        ? '<ul>' + lines.map(l => `<li>${esc(l)}</li>`).join('') + '</ul>'\n        : 'N/A';\n    }\n\n    return `<tr>\n      <td class=\"row-label\">${esc(section.label).replace(/\\n/g,'<br>')}</td>\n      <td class=\"row-content\">${cellHtml}</td>\n    </tr>`;\n  }).join('');\n\n  return `<!DOCTYPE html>\n<html>\n<head><meta charset=\"UTF-8\"><style>${CSS}</style></head>\n<body>\n  <h1>${esc(report.reportTitle)}</h1>\n  <p class=\"subtitle\">${esc(report.programLine)}</p>\n  <hr class=\"divider\">\n  <p class=\"info\"><span class=\"label\">Name: </span>${esc(report.reporter)}</p>\n  <p class=\"info\"><span class=\"label\">Week Ending: </span>${esc(report.weekEnding)}</p>\n  <hr class=\"divider\">\n  <table>${rows}</table>\n</body>\n</html>`;\n}\n\n// Process all items (one per reporter)\nreturn items.map(item => ({\n  json: {\n    htmlContent: buildHTML(item.json),\n    weekEnding:  item.json.weekEnding,\n    reporter:    item.json.reporter,\n    reportTitle: item.json.reportTitle,\n    programLine: item.json.programLine\n  }\n}));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        1056
+      ],
+      "id": "080936c7-a68b-4d57-8d3f-46fdc780aa8b",
+      "name": "Build HTML for DocRaptor"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.docraptor.com/docs",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n{\n  \"test\": false,\n  \"document_type\": \"pdf\",\n  \"document_content\": $json.htmlContent,\n  \"name\": 'Weekly_Report_' + $json.reporter.replace(/\\\\s+/g,'_') + '_' + $json.weekEnding + '.pdf'\n}\n}}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        304,
+        1056
+      ],
+      "id": "1bd7c913-f7ce-4fd6-9f39-a639ff279373",
+      "name": "Generate DOCX via DocRaptor",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// ─────────────────────────────────────────────────────────────────────\n// Prepare Email Attachment — FIXED\n// - Loops over ALL items via items.map()\n// - Skips any item where reporter is N/A, empty, or unknown (no blank reports)\n// - Correct binary path: inputBinary.data (not inputBinary.data.data)\n// ─────────────────────────────────────────────────────────────────────\n\nconst EXCLUDED = ['n/a', '', 'unknown'];\n\nconst results = [];\n\nfor (const inputItem of items) {\n  const reporter = (inputItem.json?.reporter || '').trim();\n  const reporterNorm = reporter.toLowerCase();\n\n  // Skip N/A reporters — these are unassigned tickets, do not generate a report\n  if (EXCLUDED.includes(reporterNorm)) {\n    console.log(`[Prepare Email Attachment] Skipping N/A reporter item`);\n    continue;\n  }\n\n  const inputBinary = inputItem.binary || {};\n\n  // DocRaptor returns PDF binary under key \"data\" — NOT \"data.data\"\n  const pdfBinary = inputBinary.data || inputBinary.attachment || null;\n\n  const weekEnding = inputItem.json?.weekEnding\n    || new Date().toISOString().split('T')[0];\n\n  const fileName = `Weekly_Report_${reporter.replace(/\\s+/g, '_')}_${weekEnding}.pdf`;\n\n  if (!pdfBinary) {\n    console.error(`[Prepare Email Attachment] No binary for reporter: ${reporter}`);\n  }\n\n  results.push({\n    json: {\n      fileName,\n      weekEnding,\n      reporter,\n      emailSubject: `Weekly Status Report - ${weekEnding}`,\n      emailReady: !!pdfBinary\n    },\n    binary: pdfBinary ? {\n      attachment: {\n        data: pdfBinary.data,\n        mimeType: 'application/pdf',\n        fileName\n      }\n    } : {}\n  });\n}\n\nreturn results;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        1056
+      ],
+      "id": "c83f5639-9548-428b-984a-18ad0ffb4bad",
+      "name": "Prepare Email Attachment"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ─────────────────────────────────────────────────────────────────────\n// Collect All PDFs — REPLACES Aggregate1 + Loop Over Items\n//\n// All reporter items arrive here in parallel after Prepare Email Attachment.\n// We wait for ALL items (n8n delivers the full batch) then bundle them\n// into a single email item with all PDFs as named attachments.\n//\n// This is the core fix: no loop, no premature Done-branch firing.\n// ─────────────────────────────────────────────────────────────────────\n\nconst allItems = items; // all parallel items arrive together\n\nconst attachments = {};\nconst reporters = [];\nconst failedReporters = [];\n\nconst weekEnding = allItems[0]?.json?.weekEnding\n  || new Date().toISOString().split('T')[0];\n\nallItems.forEach((item, index) => {\n  const reporter = item.json?.reporter || `Reporter_${index + 1}`;\n  const fileName = item.json?.fileName\n    || `Weekly_Report_${reporter.replace(/\\s+/g, '_')}_${weekEnding}.pdf`;\n\n  const binaryData = item.binary?.attachment?.data;\n\n  if (binaryData) {\n    attachments[`attachment${index}`] = {\n      data: binaryData,\n      mimeType: 'application/pdf',\n      fileName\n    };\n    reporters.push(reporter);\n  } else {\n    failedReporters.push(reporter);\n    console.error(`[Collect All PDFs] Missing binary for: ${reporter}`);\n  }\n});\n\nconst reportCount = reporters.length;\nconst totalExpected = allItems.length;\n\nconsole.log(`[Collect All PDFs] ${reportCount}/${totalExpected} PDFs collected. Reporters: ${reporters.join(', ')}`);\nif (failedReporters.length) {\n  console.warn(`[Collect All PDFs] Missing PDFs for: ${failedReporters.join(', ')}`);\n}\n\nreturn [{\n  json: {\n    weekEnding,\n    reporters: reporters.join(', '),\n    failedReporters: failedReporters.join(', ') || 'None',\n    reportCount,\n    totalExpected,\n    emailSubject: `Weekly Status Reports - Week Ending ${weekEnding}`,\n    emailReady: reportCount > 0\n  },\n  binary: attachments\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -192,
+        832
+      ],
+      "id": "50d8597f-ef59-4dfe-be35-50448fbcd3c5",
+      "name": "Collect All PDFs"
+    },
+    {
+      "parameters": {
+        "fromEmail": "project.manager@example.com",
+        "toEmail": " project.manager@example.com, project.manager@example.com",
+        "subject": "={{ $json.emailSubject }}",
+        "emailFormat": "=html",
+        "html": "=<html>\n<head>\n  <style>\n    body { font-family: Arial, sans-serif; font-size: 13px; color: #222; }\n    .header { color: #0070C0; font-size: 14pt; font-weight: bold; margin-bottom: 15px; }\n    .content { margin-top: 15px; line-height: 1.8; }\n    p { margin: 8px 0; }\n  </style>\n</head>\n<body>\n  <p class=\"header\">Weekly Status Reports</p>\n  <div class=\"content\">\n    <p>Hi team,</p>\n    <p>Please find attached the weekly status reports for the week ending <strong>{{ $json.weekEnding }}</strong>.</p>\n    <p><strong>Reports included ({{ $json.reportCount }}):</strong></p>\n    <p>{{ $json.reporters }}</p>\n    <p>All reports have also been posted to our Confluence page for reference.</p>\n    <p>Best regards,<br>Automated Reporting System</p>\n  </div>\n</body>\n</html>",
+        "options": {
+          "appendAttribution": false,
+          "attachments": "={{ Object.keys($binary).join(',') }}"
+        }
+      },
+      "name": "Email Boss with DOCX Report",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        48,
+        816
+      ],
+      "id": "9f5ca52d-c7ff-4763-853e-5cbb856720bc",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "fromEmail": "alerts@example.com",
+        "toEmail": "project.manager@example.com",
+        "subject": "=Weekly Report Email Failed - {{ $now.format('yyyy-MM-dd HH:mm') }}",
+        "html": "={{\n`<html>\n<body>\n  <h2 style=\"color: #d32f2f;\">⚠️ Weekly Status Report Email Failed</h2>\n  <p><strong>The weekly status report email failed to send.</strong></p>\n  <h3>Details:</h3>\n  <ul>\n    <li><strong>Week Ending:</strong> ${$('Collect All PDFs').item.json.weekEnding || 'Unknown'}</li>\n    <li><strong>Reports Expected:</strong> ${$('Collect All PDFs').item.json.totalExpected || 'Unknown'}</li>\n    <li><strong>Reports Collected:</strong> ${$('Collect All PDFs').item.json.reportCount || 0}</li>\n    <li><strong>Failed Reporters:</strong> ${$('Collect All PDFs').item.json.failedReporters || 'Unknown'}</li>\n    <li><strong>Time:</strong> ${$now.format('yyyy-MM-dd HH:mm:ss')}</li>\n    <li><strong>Workflow ID:</strong> ${$execution.id}</li>\n  </ul>\n  <h3>Action Required:</h3>\n  <ol>\n    <li>Check the Confluence page — reports may still be posted there</li>\n    <li>Check N8N execution logs for detailed error</li>\n    <li>Manually forward any available reports if needed</li>\n    <li>Investigate SMTP/DocRaptor configuration</li>\n  </ol>\n  <p><em>This is an automated alert from the N8N workflow.</em></p>\n</body>\n</html>`\n}}",
+        "options": {}
+      },
+      "name": "Alert Admin on Failure",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        608,
+        816
+      ],
+      "id": "4766eb63-42d4-4538-9802-ee658d2e537f"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Jira Fetch Project",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Jira Fetch Project": {
+      "main": [
+        [
+          {
+            "node": "Relevant Project Extraction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Relevant Project Extraction": {
+      "main": [
+        [
+          {
+            "node": "Categorize Projects",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Categorize Projects": {
+      "main": [
+        [
+          {
+            "node": "Data Team Board extract",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Team Board extract": {
+      "main": [
+        [
+          {
+            "node": "Fetch Jira Issue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Jira Issue": {
+      "main": [
+        [
+          {
+            "node": "Flatten Issue List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flatten Issue List": {
+      "main": [
+        [
+          {
+            "node": "Get Issue activities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Issue activities": {
+      "main": [
+        [
+          {
+            "node": "This Week report Filter2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "This Week report Filter2": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send Weekly Kickoff Email1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Summarize by Reporter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize by Reporter": {
+      "main": [
+        [
+          {
+            "node": "Shape for Confluence",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Format Table Data for Email DOCX",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Shape for Confluence": {
+      "main": [
+        [
+          {
+            "node": "Post To confluence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Table Data for Email DOCX": {
+      "main": [
+        [
+          {
+            "node": "Build HTML for DocRaptor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build HTML for DocRaptor": {
+      "main": [
+        [
+          {
+            "node": "Generate DOCX via DocRaptor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate DOCX via DocRaptor": {
+      "main": [
+        [
+          {
+            "node": "Prepare Email Attachment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Email Attachment": {
+      "main": [
+        [
+          {
+            "node": "Collect All PDFs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect All PDFs": {
+      "main": [
+        [
+          {
+            "node": "Email Boss with DOCX Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Boss with DOCX Report": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Alert Admin on Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {}
+}
