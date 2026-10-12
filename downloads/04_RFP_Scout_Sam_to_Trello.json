@@ -1,0 +1,574 @@
+{
+  "name": "RFP scouting and tracking (Sam.gov to Trello)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 6 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "n1",
+      "name": "Every morning",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Edit this block to change what the scout looks for. Nothing else needs touching.\nreturn [{ json: {\n  lookbackDays: 2,\n  samTypes: 'o,k,p,r',            // solicitation, combined synopsis, presolicitation, sources sought\n  naics: ['621420','621330','624190','624110','541611'],\n  samTitleQueries: ['behavioral health','family services','case management'],\n  rssFeeds: [],                    // optional extra feeds, one URL each\n  keywords: [\n    { t: 'behavioral health', w: 15 }, { t: 'supervised visitation', w: 15 },\n    { t: 'family support', w: 10 }, { t: 'case management', w: 10 },\n    { t: 'child welfare', w: 10 }, { t: 'counseling', w: 8 },\n    { t: 'trauma', w: 8 }, { t: 'program evaluation', w: 6 }\n  ],\n  setAsides: ['SBA','SBP','8A','8AN','WOSB','EDWOSB','HZC','SDVOSBC'],\n  minPursue: 70,\n  minReview: 40,\n  trelloListAction: 'PASTE_TRELLO_LIST_ID_NEEDS_ACTION',\n  trelloListReview: 'PASTE_TRELLO_LIST_ID_REVIEW',\n  managerEmail: 'manager@example.com',\n  aiModel: 'claude-sonnet-5-5',\n  companyBlurb: 'Small business providing behavioral health, family support and program services.'\n}}];\n"
+      },
+      "id": "n2",
+      "name": "Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const c = $input.first().json;\nconst fmt = d => String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0')+'/'+d.getFullYear();\nconst to = new Date(); const from = new Date(Date.now() - c.lookbackDays*86400000);\nconst base = { postedFrom: fmt(from), postedTo: fmt(to), limit: 100, ptype: c.samTypes };\nconst out = [];\nfor (const n of c.naics) out.push({ json: { label: 'naics '+n, params: { ...base, ncode: n } } });\nfor (const t of c.samTitleQueries) out.push({ json: { label: 'title '+t, params: { ...base, title: t } } });\nreturn out;\n"
+      },
+      "id": "n3",
+      "name": "Build Sam.gov queries",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.sam.gov/opportunities/v2/search",
+        "sendQuery": true,
+        "specifyQuery": "json",
+        "jsonQuery": "={{ JSON.stringify($json.params) }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "n4",
+      "name": "Sam.gov search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        100
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "",
+          "name": "Sam.gov API key (query param api_key)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = $('Config').first().json;\nconst rows = [];\nfor (const it of $input.all()) {\n  const list = (it.json && it.json.opportunitiesData) || [];\n  for (const o of list) rows.push(o);\n}\nreturn [{ json: { sam: rows, cfg } }];\n"
+      },
+      "id": "n5",
+      "name": "Collect SAM results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const feeds = $input.first().json.cfg.rssFeeds || [];\nif (!feeds.length) return [{ json: { url: '' } }];\nreturn feeds.map(u => ({ json: { url: u } }));\n"
+      },
+      "id": "n6",
+      "name": "Expand extra feeds",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url || 'https://example.invalid/none.xml' }}",
+        "options": {}
+      },
+      "id": "n7",
+      "name": "Read extra feeds (optional)",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        1320,
+        100
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const held = $('Collect SAM results').first().json;\nconst out = [];\nfor (const o of held.sam) {\n  out.push({ json: {\n    id: 'sam:' + o.noticeId, source: 'Sam.gov',\n    title: o.title || '', agency: (o.fullParentPathName || '').split('.').slice(0,2).join(' / '),\n    naics: o.naicsCode || '', setAside: o.typeOfSetAside || '', setAsideText: o.typeOfSetAsideDescription || '',\n    type: o.type || o.baseType || '', posted: o.postedDate || '', deadline: o.responseDeadLine || '',\n    url: o.uiLink || '', solNumber: o.solicitationNumber || ''\n  }});\n}\nfor (const it of $input.all()) {\n  const j = it.json || {};\n  if (!j.title || !j.link || j.error) continue;\n  out.push({ json: {\n    id: 'rss:' + (j.guid || j.link), source: 'Feed', title: j.title, agency: '', naics: '', setAside: '',\n    setAsideText: '', type: 'Feed item', posted: j.isoDate || j.pubDate || '', deadline: '', url: j.link,\n    solNumber: '', snippet: (j.contentSnippet || '').slice(0, 400)\n  }});\n}\nconst seen = new Set(); const uniq = [];\nfor (const o of out) { if (seen.has(o.json.id)) continue; seen.add(o.json.id); uniq.push(o); }\nreturn uniq;\n"
+      },
+      "id": "n8",
+      "name": "Normalize and merge",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Remembers what it has already seen, so you never get the same RFP twice.\nconst store = $getWorkflowStaticData('global');\nstore.seen = store.seen || {};\nconst now = Date.now();\nfor (const k of Object.keys(store.seen)) if (now - store.seen[k] > 120*86400000) delete store.seen[k];\nconst fresh = [];\nfor (const it of $input.all()) {\n  if (store.seen[it.json.id]) continue;\n  store.seen[it.json.id] = now;\n  fresh.push(it);\n}\nreturn fresh;\n"
+      },
+      "id": "n9",
+      "name": "Skip already seen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = $('Config').first().json;\nconst out = [];\nfor (const it of $input.all()) {\n  const o = it.json; let score = 0; const why = [];\n  const text = (o.title + ' ' + (o.snippet || '')).toLowerCase();\n  if (o.naics && cfg.naics.includes(o.naics)) { score += 25; why.push('NAICS ' + o.naics); }\n  let kw = 0; const hits = [];\n  for (const k of cfg.keywords) if (text.includes(k.t.toLowerCase())) { kw += k.w; hits.push(k.t); }\n  kw = Math.min(kw, 45); score += kw; if (hits.length) why.push('keywords: ' + hits.join(', '));\n  if (o.setAside && cfg.setAsides.includes(o.setAside)) { score += 15; why.push('set-aside ' + o.setAside); }\n  else if (!o.setAside) { score += 5; why.push('open competition'); }\n  else { score -= 10; why.push('set-aside ' + o.setAside + ' not held'); }\n  let daysLeft = null;\n  if (o.deadline) {\n    daysLeft = Math.ceil((new Date(o.deadline).getTime() - Date.now()) / 86400000);\n    if (daysLeft >= 7) { score += 10; } else if (daysLeft >= 3) { score += 5; why.push('tight deadline'); } else { why.push('deadline in ' + daysLeft + ' days'); }\n  }\n  if (/solicitation|combined/i.test(o.type)) score += 5;\n  score = Math.max(0, Math.min(100, score));\n  const bucket = score >= cfg.minPursue ? 'Needs action' : score >= cfg.minReview ? 'Review' : 'Skip';\n  out.push({ json: { ...o, score, bucket, why: why.join('; '), daysLeft } });\n}\nreturn out.sort((a, b) => b.json.score - a.json.score);\n"
+      },
+      "id": "n10",
+      "name": "Score fit",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "a",
+              "leftValue": "={{ $json.bucket }}",
+              "rightValue": "Skip",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "n11",
+      "name": "Anything to review?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = $('Config').first().json;\nreturn $input.all().map(it => {\n  const o = it.json;\n  const prompt = 'You screen government opportunities for a company: ' + cfg.companyBlurb +\n    '\\nOpportunity: ' + o.title + '\\nAgency: ' + o.agency + '\\nNAICS: ' + o.naics + '\\nSet-aside: ' + (o.setAsideText || o.setAside || 'none') +\n    '\\nDeadline: ' + (o.deadline || 'unknown') + '\\nScreening notes: ' + o.why +\n    '\\nIn two plain sentences, say whether this looks worth a bid and the single biggest risk. Do not invent facts that are not above.';\n  return { json: { ...o, aiBody: { model: cfg.aiModel, max_tokens: 200, messages: [{ role: 'user', content: prompt }] } } };\n});\n"
+      },
+      "id": "n12",
+      "name": "Prepare AI request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.aiBody) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "n13",
+      "name": "Claude screens each one",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        300
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "Anthropic API key (header x-api-key)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const src = $('Prepare AI request').all();\nconst res = $input.all();\nreturn src.map((it, i) => {\n  const r = res[i] && res[i].json;\n  let text = '';\n  if (r && Array.isArray(r.content) && r.content[0] && r.content[0].text) text = r.content[0].text.trim();\n  const { aiBody, ...rest } = it.json;\n  return { json: { ...rest, summary: text || 'AI summary unavailable. Screening notes: ' + rest.why } };\n});\n"
+      },
+      "id": "n14",
+      "name": "Attach summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(it => {\n  const o = it.json;\n  const desc = [\n    '**Score:** ' + o.score + ' (' + o.bucket + ')', '**Agency:** ' + (o.agency || 'n/a'),\n    '**NAICS:** ' + (o.naics || 'n/a') + '   **Set-aside:** ' + (o.setAsideText || o.setAside || 'none'),\n    '**Posted:** ' + (o.posted || 'n/a'), '**Deadline:** ' + (o.deadline || 'not stated'), '',\n    o.summary, '', '**Why it scored this way:** ' + o.why, '', o.url\n  ].join('\\n');\n  const due = o.deadline && !isNaN(new Date(o.deadline)) ? new Date(o.deadline).toISOString() : '';\n  const listId = o.bucket === 'Needs action' ? $('Config').first().json.trelloListAction || '' : $('Config').first().json.trelloListReview || '';\n  return { json: { ...o, cardName: '[' + o.score + '] ' + o.title.slice(0, 120), cardDesc: desc, cardDue: due, listId } };\n});\n"
+      },
+      "id": "n15",
+      "name": "Build Trello card",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "card",
+        "operation": "create",
+        "listId": "={{ $json.listId }}",
+        "name": "={{ $json.cardName }}",
+        "description": "={{ $json.cardDesc }}",
+        "additionalFields": {
+          "due": "={{ $json.cardDue }}",
+          "urlSource": "={{ $json.url }}"
+        }
+      },
+      "id": "n16",
+      "name": "Create Trello card",
+      "type": "n8n-nodes-base.trello",
+      "typeVersion": 1,
+      "position": [
+        1540,
+        300
+      ],
+      "credentials": {
+        "trelloApi": {
+          "id": "",
+          "name": "Trello"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $('Build Trello card').all().map(i => i.json);\nconst act = items.filter(o => o.bucket === 'Needs action');\nconst rev = items.filter(o => o.bucket === 'Review');\nconst esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');\nconst row = o => '<li><b><a href=\"' + esc(o.url) + '\">' + esc(o.title) + '</a></b> (score ' + o.score + ')<br>' +\n  esc(o.agency) + ' | Due: ' + esc(o.deadline || 'not stated') + '<br>' + esc(o.summary) + '</li>';\nlet html = '<h2>RFP scout</h2>';\nhtml += act.length ? '<h3>Needs action (' + act.length + ')</h3><ul>' + act.map(row).join('') + '</ul>' : '<p>Nothing needs action today.</p>';\nhtml += rev.length ? '<h3>Worth a look (' + rev.length + ')</h3><ul>' + rev.map(row).join('') + '</ul>' : '';\nhtml += '<p>Every item is also a Trello card.</p>';\nreturn [{ json: { count: act.length + rev.length, subject: 'RFP scout: ' + act.length + ' need action, ' + rev.length + ' to review', html } }];\n"
+      },
+      "id": "n17",
+      "name": "Build manager digest",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "b",
+              "leftValue": "={{ $json.count }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "n18",
+      "name": "Anything to send?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        220,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Config').first().json.managerEmail }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "message": "={{ $json.html }}",
+        "options": {}
+      },
+      "id": "n19",
+      "name": "Email the manager",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        440,
+        500
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Gmail"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every morning": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Build Sam.gov queries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Sam.gov queries": {
+      "main": [
+        [
+          {
+            "node": "Sam.gov search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sam.gov search": {
+      "main": [
+        [
+          {
+            "node": "Collect SAM results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect SAM results": {
+      "main": [
+        [
+          {
+            "node": "Expand extra feeds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expand extra feeds": {
+      "main": [
+        [
+          {
+            "node": "Read extra feeds (optional)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read extra feeds (optional)": {
+      "main": [
+        [
+          {
+            "node": "Normalize and merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and merge": {
+      "main": [
+        [
+          {
+            "node": "Skip already seen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip already seen": {
+      "main": [
+        [
+          {
+            "node": "Score fit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score fit": {
+      "main": [
+        [
+          {
+            "node": "Anything to review?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anything to review?": {
+      "main": [
+        [
+          {
+            "node": "Prepare AI request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare AI request": {
+      "main": [
+        [
+          {
+            "node": "Claude screens each one",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude screens each one": {
+      "main": [
+        [
+          {
+            "node": "Attach summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attach summary": {
+      "main": [
+        [
+          {
+            "node": "Build Trello card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Trello card": {
+      "main": [
+        [
+          {
+            "node": "Create Trello card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Trello card": {
+      "main": [
+        [
+          {
+            "node": "Build manager digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build manager digest": {
+      "main": [
+        [
+          {
+            "node": "Anything to send?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anything to send?": {
+      "main": [
+        [
+          {
+            "node": "Email the manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

@@ -6,7 +6,7 @@ var FALLBACK = [
  {id:"02",capability:"Proposals",title:"Claude skills and agents for RFP responses",result:"About a week down to about two days per response, across 30+ responses (estimate)",status:"In use",page:"case-claude-skills.html"},
  {id:"03",capability:"Leadership",title:"Leading delivery and proposal teams",result:"Data, web development and testing teams, plus proposal and AI automation teams",status:"In use",page:"team-leadership.html"},
  {id:"04",capability:"Data",title:"Reporting and dashboards from work trackers",result:"Jira, Tempo, Slack, Trello, ClickUp and Power BI",status:"In use",page:"data-dashboards.html"},
- {id:"06",capability:"Proposals",title:"RFP scouting and tracking system",result:"Scouts Sam.gov, FindRFP and other sources, updates Trello, notifies the manager",status:"In use",page:"#solutions"},
+ {id:"06",capability:"Proposals",title:"RFP scouting and tracking system",result:"n8n workflow: searches Sam.gov, scores fit, Claude screens, creates Trello cards, emails the manager",status:"Built, in testing",page:"#solutions",download:"downloads/04_RFP_Scout_Sam_to_Trello.json"},
  {id:"07",capability:"Automation",title:"Hiring funnel model",result:"Google Sheets connected to hiring sites, tracking every stage",status:"In use",page:"#solutions"},
  {id:"05",capability:"Training",title:"AI and automation training",result:"More than 2,000 young people trained in Kenya",status:"Delivered",page:"training.html"}
 ];
