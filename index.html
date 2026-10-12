@@ -5,195 +5,89 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Hillary Lihanda | AI workflow automation and operations</title>
 <meta name="description" content="Hillary Lihanda builds production AI workflows and runs operations for delivery and proposal teams. Based in Eldoret, Kenya, working US hours.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%232840D8'/%3E%3Cpath d='M8 9v14M24 9v14M8 16h16' stroke='white' stroke-width='3' fill='none'/%3E%3C/svg%3E">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230071e3'/%3E%3Cpath d='M9 9v14M23 9v14M9 16h14' stroke='white' stroke-width='3' fill='none'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="app.css">
 </head>
 <body>
-<div class="progress" aria-hidden="true"></div>
 <a class="skip" href="#main">Skip to content</a>
-<div class="shell">
-  <header class="topbar">
-    <a class="brand" href="index.html">Hillary Lihanda</a>
-    <nav aria-label="Main">
-      <a href="#work">Work</a>
-      <a href="#proof">Proof</a>
-      <a href="#expertise">Expertise</a>
-      <a href="#focus">Focus</a>
-      <a href="#contact">Contact</a>
-      <button type="button" class="theme-toggle" aria-label="Switch colour theme">Dark</button>
-    </nav>
-  </header>
-
-  <main id="main">
-    <div class="hero">
-      <h1>I build the automations that keep delivery teams on schedule.</h1>
-      <p class="lede">Operations lead and AI workflow builder. I connect Jira, Confluence, time tracking and AI models so reports write themselves and nobody has to chase updates.</p>
-      <p class="who">Eldoret, Kenya. Working US hours.</p>
-      <div class="cta-row">
-        <a class="btn primary" href="case-ops-automation.html">See the workflow in detail</a>
-        <a class="btn ghost" href="#contact">Work with me</a>
-      </div>
-
-      <div class="flow-wrap">
-        <p class="swipe">Swipe sideways to follow the full flow.</p>
-        <svg class="flow" viewBox="0 0 860 250" role="img" aria-labelledby="flow-title flow-desc">
-          <title id="flow-title">Weekly reporting workflow</title>
-          <desc id="flow-desc">Jira board and Tempo hours feed a merge and filter step. An AI step drafts each person's report. Reports go to a Confluence page and to a PDF email. If the email fails, an alert is sent.</desc>
-
-          <path class="wire" d="M170 62 C200 62 200 125 230 125"/>
-          <path class="wire" d="M170 188 C200 188 200 125 230 125"/>
-          <path class="wire" d="M380 125 H440"/>
-          <path class="wire" d="M590 125 C640 125 640 62 690 62"/>
-          <path class="wire" d="M590 125 H690"/>
-          <path class="wire alert" d="M590 125 C640 125 640 188 690 188"/>
-
-          <path class="pulse a" pathLength="100" d="M170 62 C200 62 200 125 230 125"/>
-          <path class="pulse a" pathLength="100" d="M170 188 C200 188 200 125 230 125"/>
-          <path class="pulse b" pathLength="100" d="M380 125 H440"/>
-          <path class="pulse c" pathLength="100" d="M590 125 C640 125 640 62 690 62"/>
-          <path class="pulse c" pathLength="100" d="M590 125 H690"/>
-
-          <g>
-            <rect class="node" x="20" y="40" width="150" height="44" rx="6"/>
-            <text class="label" x="36" y="67">Jira board</text>
-          </g>
-          <g>
-            <rect class="node" x="20" y="166" width="150" height="44" rx="6"/>
-            <text class="label" x="36" y="193">Tempo hours</text>
-          </g>
-          <g>
-            <rect class="node" x="230" y="96" width="150" height="58" rx="6"/>
-            <text class="label" x="246" y="122">Merge and filter</text>
-            <text class="sub" x="246" y="141">this week only</text>
-          </g>
-          <g>
-            <rect class="node" x="440" y="96" width="150" height="58" rx="6"/>
-            <text class="label" x="456" y="122">AI drafts report</text>
-            <text class="sub" x="456" y="141">one per person</text>
-          </g>
-          <g>
-            <rect class="node" x="690" y="40" width="150" height="44" rx="6"/>
-            <text class="label" x="706" y="67">Confluence page</text>
-          </g>
-          <g>
-            <rect class="node" x="690" y="103" width="150" height="44" rx="6"/>
-            <text class="label" x="706" y="130">PDF by email</text>
-          </g>
-          <g>
-            <rect class="node alert" x="690" y="166" width="150" height="44" rx="6"/>
-            <text class="label" x="706" y="193">Failure alert</text>
-          </g>
-        </svg>
-        <p class="flow-caption">One of the three workflows behind this page: the weekly team report. It ran against a live Jira board for an enterprise client.</p>
-      </div>
-
-      <ul class="stats">
-        <li><b>3</b><span>n8n workflows, 12 to 29 nodes</span></li>
-        <li><b>1 week to 2 days</b><span>per RFP response, across 30+ responses</span></li>
-        <li><b>7</b><span>custom Claude skills</span></li>
-        <li><b>4</b><span>systems connected: Jira, Tempo, Confluence, Google Sheets</span></li>
-      </ul>
-    </div>
-
-    <section id="work" aria-labelledby="work-h">
-      <div class="section-head">
-        <h2 id="work-h">Selected work</h2>
-        <div class="section-body">
-          <ul class="work-list">
-            <li>
-              <a class="work-link" href="case-ops-automation.html">
-                <div>
-                  <h3>Operations automation for a data team</h3>
-                  <p>Reminders, activity monitoring and AI-drafted weekly reports across Jira, Tempo and Confluence. Workflow files are available to download.</p>
-                </div>
-                <span class="chip">In production</span>
-              </a>
-            </li>
-            <li>
-              <a class="work-link" href="case-claude-skills.html">
-                <div>
-                  <h3>Claude skills for proposal and reporting work</h3>
-                  <p>An RFP operating system with compliance matrices and review gates, plus skills that turn call transcripts into standard reports. An RFP response now takes about two days instead of a week.</p>
-                </div>
-                <span class="chip">In use</span>
-              </a>
-            </li>
-          </ul>
-        </div>
-      </div>
-    </section>
-
-    <section id="proof" aria-labelledby="proof-h">
-      <div class="section-head">
-        <h2 id="proof-h">Proof</h2>
-        <div class="section-body">
-          <p>Every claim on this site, with the evidence behind it. Filter by area.</p>
-          <div class="filters" id="proof-filters" role="group" aria-label="Filter proof by area"></div>
-          <table class="proof">
-            <thead><tr><th scope="col">Area</th><th scope="col">Proof</th><th scope="col">Result</th><th scope="col">Status</th><th scope="col">File</th></tr></thead>
-            <tbody id="proof-body"></tbody>
-          </table>
-          <p class="proof-note">Figures marked estimate are my own working-time estimates, not timesheet data.</p>
-        </div>
-      </div>
-    </section>
-
-    <section id="expertise" aria-labelledby="expertise-h">
-      <div class="section-head">
-        <h2 id="expertise-h">Expertise</h2>
-        <div class="section-body">
-          <ul class="work-list">
-            <li><a class="work-link" href="team-leadership.html"><div><h3>Team leadership</h3><p>Data, web development, testing, proposal and AI automation teams.</p></div></a></li>
-            <li><a class="work-link" href="data-dashboards.html"><div><h3>Data and dashboards</h3><p>Jira, Tempo, Slack, Trello, ClickUp, Airtable and Power BI turned into reports people read.</p></div></a></li>
-            <li><a class="work-link" href="training.html"><div><h3>Training and facilitation</h3><p>More than 2,000 young people in Kenya trained on AI and automation tools. Field operations and training in a refugee setting.</p></div></a></li>
-          </ul>
-        </div>
-      </div>
-    </section>
-
-    <section id="focus" aria-labelledby="focus-h">
-      <div class="section-head">
-        <h2 id="focus-h">What I work on</h2>
-        <div class="section-body">
-          <dl class="facts">
-            <dt>Workflow automation</dt>
-            <dd>n8n, Jira, Confluence, Tempo, Google Sheets, email. Scheduled jobs, escalation logic, duplicate checks, failure alerts.</dd>
-            <dt>AI in the loop</dt>
-            <dd>Claude and OpenAI models drafting structured output that a person reviews before it goes out.</dd>
-            <dt>Proposal operations</dt>
-            <dd>Solicitation analysis, compliance tracking, go or no-go decisions, section-by-section drafting with review gates.</dd>
-            <dt>Team operations</dt>
-            <dd>Weekly reporting, Jira board design, process documentation and runbooks.</dd>
-            <dt>Web apps</dt>
-            <dd>A point of sale app for a retail business (React, Supabase, Netlify) and an investor research app for the Nairobi Securities Exchange.</dd>
-          </dl>
-        </div>
-      </div>
-    </section>
-
-    <section id="contact" aria-labelledby="contact-h">
-      <div class="section-head">
-        <h2 id="contact-h">Contact</h2>
-        <div class="section-body">
-          <p>I take on automation builds and operations support for teams that report to a US client or manager. Send me the process that eats the most hours and I will tell you what can be automated.</p>
-          <div class="cta-row">
-            <a class="btn primary" href="mailto:hillarylihandapro@gmail.com">Email me</a>
-            <a class="btn ghost" href="https://www.linkedin.com/in/lihanda-hillary3310" rel="noopener">LinkedIn</a>
-          </div>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <footer>
-    <span>Hillary Lihanda, Eldoret, Kenya</span>
-    <span>Client details are removed from every case study on this site.</span>
-  </footer>
+<div class="app">
+  <aside class="side">
+    <a class="brand" href="#overview" aria-label="Hillary Lihanda, overview"><span class="logo">HL</span><div><b>Hillary Lihanda</b><span>Automation and operations</span></div></a>
+    <nav aria-label="Sections"><ul class="nav"><li><a href="#overview" data-cat="overview"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></svg>Overview</a></li><li><a href="#automation" data-cat="automation"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8.5 6h7M7 8.2l4 7.5M17 8.2l-4 7.5"/></svg>Automation</a></li><li><a href="#proposals" data-cat="proposals"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M10 12h6M10 16h6"/></svg>Proposals</a></li><li><a href="#leadership" data-cat="leadership"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7" r="3"/><circle cx="5.5" cy="17" r="2.5"/><circle cx="18.5" cy="17" r="2.5"/><path d="M12 10v3M12 13H6.5v1.5M12 13h5.5v1.5"/></svg>Leadership</a></li><li><a href="#data" data-cat="data"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Data and dashboards</a></li><li><a href="#training" data-cat="training"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17.5" cy="9" r="2.3"/><path d="M16 14.2c3 .2 5 2.4 5 5.3"/></svg>Training</a></li><li class="sep" role="presentation"></li><li><a href="#proof" data-cat="proof"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/></svg>Proof</a></li><li><a href="#contact" data-cat="contact"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>Contact</a></li></ul></nav>
+    <div class="side-foot"><span>Eldoret, Kenya</span><button type="button" class="theme-toggle" aria-label="Switch colour theme">Dark</button></div>
+  </aside>
+  <main class="main" id="main" tabindex="-1"><section class="detail" id="overview" data-cat="overview" aria-labelledby="overview-h"><p class="fx eyebrow" style="--i:0">Hillary Lihanda</p><h1 id="overview-h">I build the systems that keep delivery teams on schedule.</h1>
+<p class="lede fx" style="--i:2">Operations lead and AI workflow builder. I connect Jira, Confluence, time tracking and AI models so reports write themselves and nobody has to chase updates.</p>
+<div class="tiles fx" style="--i:3"><div class="tile"><b data-count="3">3</b><span>n8n workflows in production</span></div><div class="tile"><b data-count="30" data-suffix="+">30+</b><span>RFP responses delivered</span></div><div class="tile"><b data-count="2000" data-suffix="+">2,000+</b><span>people trained in Kenya</span></div></div>
+<h2 class="fx" style="--i:4">What I work on</h2>
+<div class="cards fx" style="--i:5"><a class="card" href="#automation"><h3>Automation</h3><p>Reminders, reports and hours tracking that run without anyone chasing.</p></a><a class="card" href="#proposals"><h3>Proposals</h3><p>Claude skills that cut an RFP response from about a week to about two days.</p></a><a class="card" href="#leadership"><h3>Leadership</h3><p>Data, web, testing, proposal and AI automation teams.</p></a><a class="card" href="#training"><h3>Training</h3><p>AI and automation skills for young people and field teams.</p></a></div>
+<div class="btnrow fx" style="--i:6"><a class="btn primary" href="#contact">Work with me</a><a class="btn soft" href="#proof">See the proof</a></div></section><section class="detail" id="automation" data-cat="automation" hidden aria-labelledby="automation-h"><p class="fx eyebrow">Automation</p><h1 id="automation-h" class="fx" style="--i:1">Automation that does the chasing.</h1>
+<p class="lede fx" style="--i:2">A data team logged its work in Jira and Tempo, and every person needed a weekly report. I replaced the chasing and the copy-pasting with three connected workflows.</p>
+<ul class="list fx" style="--i:3"><li><b>Activity reminders.</b> Wednesday to Friday, the people with no logged work get a nudge that firms up each day. A log stops anyone being reminded twice.</li><li><b>Weekly reports with AI drafting.</b> Each person's report is drafted from their ticket comments, then published to Confluence and emailed as PDF.</li><li><b>Hours version.</b> The same report with Tempo time, matched to tickets without double counting.</li><li><b>Built to fail loudly.</b> If the email step breaks, an alert goes out instead of nothing happening.</li></ul>
+<h2 class="fx" style="--i:4">What it connects</h2>
+<ul class="chips fx" style="--i:5"><li>n8n</li><li>Jira</li><li>Tempo</li><li>Confluence</li><li>Google Sheets</li><li>Claude</li><li>OpenAI</li><li>Email</li></ul>
+<div class="btnrow fx" style="--i:6"><a class="btn primary" href="case-ops-automation.html">Watch the walkthrough</a><a class="btn soft" href="#proof">See the proof</a></div></section><section class="detail" id="proposals" data-cat="proposals" hidden aria-labelledby="proposals-h"><p class="fx eyebrow">Proposals</p><h1 id="proposals-h" class="fx" style="--i:1">RFP responses in two days, not a week.</h1>
+<p class="lede fx" style="--i:2">Proposal teams lose bids on compliance mistakes, not weak ideas. I built Claude skills and agents that run a response from solicitation to final check.</p>
+<ul class="list fx" style="--i:3"><li><b>Compliance matrix.</b> Every "shall" and "must" becomes a row, quoted word for word.</li><li><b>Go or no-go first.</b> A short, evidence-based call with at most three win themes.</li><li><b>One section at a time.</b> Draft, stop, approve, then move on.</li><li><b>No invented facts.</b> Missing numbers stay as visible placeholders.</li><li><b>Review gates.</b> Compliance, quality, coverage and a submission checklist.</li></ul>
+<p class="note fx" style="--i:4">More than 30 RFP responses. About a week became about two days. These are my own working-time estimates, not timesheet data.</p>
+<div class="btnrow fx" style="--i:5"><a class="btn primary" href="case-claude-skills.html">Watch the walkthrough</a><a class="btn soft" href="#leadership">How I lead proposals</a></div></section><section class="detail" id="leadership" data-cat="leadership" hidden aria-labelledby="leadership-h"><p class="fx eyebrow">Leadership</p><h1 id="leadership-h" class="fx" style="--i:1">Leading the teams and the process behind them.</h1>
+<p class="lede fx" style="--i:2">I keep several teams working to one rhythm: clear boards, written procedures, regular reporting and early warnings when something slips.</p>
+<div class="cards fx" style="--i:3"><div class="card"><h3>Microhealth program teams</h3><p>Data, web development and testing teams, each with its own board and written operating procedure.</p></div><div class="card"><h3>Proposal team</h3><p>Opportunity intake, compliance matrices, bid decisions, writers and review before submission.</p></div><div class="card"><h3>AI automation team</h3><p>Which processes to automate first, how workflows are built, documented and monitored.</p></div><div class="card"><h3>How I lead</h3><p>Procedure first, a fixed weekly report, automated chasing, review before anything goes to the client.</p></div></div>
+<div class="btnrow fx" style="--i:4"><a class="btn primary" href="team-leadership.html">Read more</a><a class="btn soft" href="#data">Boards and dashboards</a></div></section><section class="detail" id="data" data-cat="data" hidden aria-labelledby="data-h"><p class="fx eyebrow">Data and dashboards</p><h1 id="data-h" class="fx" style="--i:1">Work trackers turned into reports people read.</h1>
+<p class="lede fx" style="--i:2">Work tools already hold the facts: who did what, how long it took, what is late. I connect them so the answer reaches the manager without anyone assembling it by hand.</p>
+<h2 class="fx" style="--i:3">Tools I have worked in</h2>
+<ul class="chips fx" style="--i:4"><li>Jira</li><li>Tempo</li><li>Slack</li><li>Trello</li><li>ClickUp</li><li>Asana</li><li>Airtable</li><li>Google Sheets</li><li>Supabase</li><li>Power BI</li></ul>
+<ul class="list fx" style="--i:5"><li><b>Board design.</b> Workflows, permissions and clean-up so the data is trustworthy.</li><li><b>Reporting.</b> Weekly activity and hours reports that build themselves.</li><li><b>Dashboards.</b> Power BI views of workflow impact, time saved and adoption, shared weekly.</li></ul>
+<div class="btnrow fx" style="--i:6"><a class="btn primary" href="data-dashboards.html">Read more</a><a class="btn soft" href="#automation">See it in action</a></div></section><section class="detail" id="training" data-cat="training" hidden aria-labelledby="training-h"><p class="fx eyebrow">Training</p><h1 id="training-h" class="fx" style="--i:1">Teaching AI and automation to 2,000+ people.</h1>
+<p class="lede fx" style="--i:2">I teach non-technical people to use AI and automation tools well enough to work with them the same day. Every session ends with something the learner built.</p>
+<ul class="list fx" style="--i:3"><li><b>Young people in Kenya.</b> More than 2,000 trained on ChatGPT, Zapier, n8n, Airtable and Slack through the Ajira Digital programme.</li><li><b>Practical by design.</b> Each module is built around a real workflow, so participants leave with a working automation.</li><li><b>Refugee and humanitarian settings.</b> Operations and training coordination with the Norwegian Refugee Council in Dadaab.</li></ul>
+<div class="btnrow fx" style="--i:4"><a class="btn primary" href="training.html">Read more</a><a class="btn soft" href="#contact">Book a workshop</a></div></section><section class="detail" id="proof" data-cat="proof" hidden aria-labelledby="proof-h"><p class="fx eyebrow">Proof</p><h1 id="proof-h" class="fx" style="--i:1">The evidence behind every claim.</h1>
+<p class="lede fx" style="--i:2">Filter by area. Figures marked estimate are my own working-time estimates, not timesheet data.</p>
+<div class="filters" id="proof-filters" role="group" aria-label="Filter proof by area"></div>
+<table class="proof"><thead><tr><th scope="col">Area</th><th scope="col">Proof</th><th scope="col">Result</th><th scope="col">Status</th><th scope="col">File</th></tr></thead><tbody id="proof-body"></tbody></table></section><section class="detail" id="contact" data-cat="contact" hidden aria-labelledby="contact-h"><p class="fx eyebrow">Contact</p><h1 id="contact-h" class="fx" style="--i:1">Send me the process that eats your hours.</h1>
+<p class="lede fx" style="--i:2">I take on automation builds and operations support for teams that report to a US client or manager, and training for teams and programmes. Tell me what is slowing you down and I will tell you what can be automated.</p>
+<div class="btnrow fx" style="--i:3"><a class="btn primary" href="mailto:hillarylihandapro@gmail.com">Email me</a><a class="btn soft" href="https://www.linkedin.com/in/lihanda-hillary3310" rel="noopener">LinkedIn</a></div>
+<p class="note fx" style="--i:4">Eldoret, Kenya. Working US hours. Client details are removed from every case study on this site.</p></section></main>
+  <div class="vis" aria-hidden="false"><div class="visual" data-cat="overview"><svg viewBox="0 0 360 420" role="img" aria-label="Connected nodes around a central point"><defs><linearGradient id="go" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--blue)"/><stop offset="1" stop-color="var(--indigo)"/></linearGradient><linearGradient id="ho" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--mint)"/><stop offset="1" stop-color="var(--blue)"/></linearGradient></defs>
+<circle cx="180" cy="210" r="150" fill="none" stroke="var(--line)"/><circle cx="180" cy="210" r="100" fill="none" stroke="var(--line)"/>
+<g class="spin"><circle cx="180" cy="60" r="16" fill="url(#ho)"/><circle cx="310" cy="285" r="13" fill="url(#go)"/><circle cx="50" cy="285" r="19" fill="url(#ho)"/><circle cx="262" cy="123" r="9" fill="var(--indigo)"/><circle cx="98" cy="123" r="9" fill="var(--blue)"/><circle cx="180" cy="360" r="9" fill="var(--mint)"/>
+<path d="M180 60L310 285L50 285Z" fill="none" stroke="url(#go)" stroke-width="1.2" opacity=".5"/></g>
+<circle cx="180" cy="210" r="62" fill="url(#go)"/><circle cx="180" cy="210" r="62" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="2"/>
+<path d="M155 190v40M205 190v40M155 210h50" stroke="#fff" stroke-width="9" stroke-linecap="round" fill="none"/></svg><div class="glass g1"><b>Eldoret, Kenya</b>Working US hours</div><div class="glass g2"><b>Ops lead</b>and AI workflow builder</div></div><div class="visual" data-cat="automation" hidden><svg viewBox="0 0 360 420" role="img" aria-label="Jira feeds an AI step which feeds a report"><defs><linearGradient id="ga" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--blue)"/><stop offset="1" stop-color="var(--indigo)"/></linearGradient><linearGradient id="ha" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--mint)"/><stop offset="1" stop-color="var(--blue)"/></linearGradient></defs>
+<rect x="40" y="22" width="150" height="74" rx="18" fill="var(--surface)" stroke="var(--line)"/><circle cx="76" cy="59" r="14" fill="url(#ha)"/><rect x="100" y="48" width="70" height="8" rx="4" fill="var(--line)"/><rect x="100" y="64" width="46" height="8" rx="4" fill="var(--line)"/>
+<rect x="170" y="162" width="150" height="74" rx="18" fill="var(--surface)" stroke="var(--line)"/><circle cx="206" cy="199" r="14" fill="url(#ga)"/><rect x="230" y="188" width="70" height="8" rx="4" fill="var(--line)"/><rect x="230" y="204" width="46" height="8" rx="4" fill="var(--line)"/>
+<rect x="40" y="302" width="150" height="74" rx="18" fill="var(--surface)" stroke="var(--line)"/><circle cx="76" cy="339" r="14" fill="url(#ha)"/><rect x="100" y="328" width="70" height="8" rx="4" fill="var(--line)"/><rect x="100" y="344" width="46" height="8" rx="4" fill="var(--line)"/>
+<path class="dash" d="M115 96C115 140 245 120 245 162" fill="none" stroke="url(#ga)" stroke-width="3" stroke-linecap="round"/>
+<path class="dash" d="M245 236C245 280 115 258 115 302" fill="none" stroke="url(#ga)" stroke-width="3" stroke-linecap="round"/>
+<path d="M70 59l8 8 14-16" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M200 199h12M206 193v12" stroke="#fff" stroke-width="3" stroke-linecap="round"/><path d="M70 339h12M76 333v12" stroke="#fff" stroke-width="0"/><path d="M69 340l6 6 12-13" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="glass g1"><b>3</b>n8n workflows</div><div class="glass g2"><b>4</b>systems connected</div></div><div class="visual" data-cat="proposals" hidden><svg viewBox="0 0 360 420" role="img" aria-label="Stack of documents with check marks"><defs><linearGradient id="gp" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--blue)"/><stop offset="1" stop-color="var(--indigo)"/></linearGradient><linearGradient id="hp" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--mint)"/><stop offset="1" stop-color="var(--blue)"/></linearGradient></defs>
+<rect x="78" y="46" width="210" height="270" rx="16" fill="var(--surface)" stroke="var(--line)" transform="rotate(-8 183 181)" opacity=".7"/>
+<rect x="68" y="58" width="210" height="270" rx="16" fill="var(--surface)" stroke="var(--line)" transform="rotate(-3 173 193)" opacity=".9"/>
+<rect x="62" y="72" width="226" height="290" rx="18" fill="var(--surface)" stroke="var(--line)"/>
+<rect x="86" y="98" width="110" height="12" rx="6" fill="url(#gp)"/><rect x="86" y="122" width="170" height="7" rx="3.5" fill="var(--line)"/><rect x="86" y="138" width="140" height="7" rx="3.5" fill="var(--line)"/>
+<g><circle class="pop" style="--i:1" cx="100" cy="190" r="13" fill="url(#hp)"/><path class="pop" style="--i:1" d="M93 190l5 5 9-10" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="124" y="184" width="120" height="10" rx="5" fill="var(--line)"/>
+<circle class="pop" style="--i:3" cx="100" cy="232" r="13" fill="url(#hp)"/><path class="pop" style="--i:3" d="M93 232l5 5 9-10" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="124" y="226" width="100" height="10" rx="5" fill="var(--line)"/>
+<circle class="pop" style="--i:5" cx="100" cy="274" r="13" fill="url(#hp)"/><path class="pop" style="--i:5" d="M93 274l5 5 9-10" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="124" y="268" width="130" height="10" rx="5" fill="var(--line)"/>
+<circle cx="100" cy="316" r="13" fill="none" stroke="var(--line)" stroke-width="2"/><rect x="124" y="310" width="90" height="10" rx="5" fill="var(--line)"/></g>
+<circle cx="276" cy="330" r="46" fill="var(--surface)" stroke="var(--line)"/><circle cx="276" cy="330" r="34" fill="none" stroke="var(--line)" stroke-width="9"/><circle cx="276" cy="330" r="34" fill="none" stroke="url(#gp)" stroke-width="9" stroke-linecap="round" stroke-dasharray="214" stroke-dashoffset="150" transform="rotate(-90 276 330)"/></svg><div class="glass g1"><b>30+</b>RFP responses</div><div class="glass g2"><b>1 week to 2 days</b>per response (estimate)</div></div><div class="visual" data-cat="leadership" hidden><svg viewBox="0 0 360 420" role="img" aria-label="A lead node connected to five team nodes"><defs><linearGradient id="gl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--blue)"/><stop offset="1" stop-color="var(--indigo)"/></linearGradient><linearGradient id="hl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--mint)"/><stop offset="1" stop-color="var(--blue)"/></linearGradient></defs>
+<path d="M180 120V190M180 190H70V250M180 190H290V250M180 190V250M180 190H125V330M180 190H235V330" fill="none" stroke="var(--line)" stroke-width="3"/>
+<path class="dash" d="M180 120V190M180 190H70V250M180 190H290V250" fill="none" stroke="url(#gl)" stroke-width="2.5"/>
+<circle cx="180" cy="86" r="42" fill="url(#gl)"/><circle cx="180" cy="76" r="13" fill="#fff"/><path d="M158 108c4-14 40-14 44 0" fill="#fff"/>
+<g fill="var(--surface)" stroke="var(--line)"><circle cx="70" cy="272" r="30"/><circle cx="180" cy="272" r="30"/><circle cx="290" cy="272" r="30"/><circle cx="125" cy="352" r="26"/><circle cx="235" cy="352" r="26"/></g>
+<g fill="url(#hl)"><circle cx="70" cy="266" r="9"/><circle cx="180" cy="266" r="9"/><circle cx="290" cy="266" r="9"/><circle cx="125" cy="346" r="8"/><circle cx="235" cy="346" r="8"/></g>
+<g fill="url(#hl)" opacity=".8"><path d="M52 292c3-12 33-12 36 0z"/><path d="M162 292c3-12 33-12 36 0z"/><path d="M272 292c3-12 33-12 36 0z"/><path d="M109 369c3-11 29-11 32 0z"/><path d="M219 369c3-11 29-11 32 0z"/></g></svg><div class="glass g1"><b>5 teams</b>data, web, testing, proposal, AI</div><div class="glass g2"><b>One rhythm</b>boards, SOPs, weekly reports</div></div><div class="visual" data-cat="data" hidden><svg viewBox="0 0 360 420" role="img" aria-label="Abstract dashboard with bars, a line and a ring"><defs><linearGradient id="gd" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--blue)"/><stop offset="1" stop-color="var(--indigo)"/></linearGradient><linearGradient id="hd" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--mint)"/><stop offset="1" stop-color="var(--blue)"/></linearGradient></defs>
+<rect x="20" y="30" width="320" height="360" rx="26" fill="var(--surface)" stroke="var(--line)"/>
+<circle cx="52" cy="62" r="6" fill="#ff5f57"/><circle cx="72" cy="62" r="6" fill="#febc2e"/><circle cx="92" cy="62" r="6" fill="#28c840"/>
+<rect x="44" y="92" width="130" height="64" rx="14" fill="var(--bg)"/><rect x="58" y="106" width="50" height="8" rx="4" fill="var(--line)"/><rect x="58" y="124" width="84" height="16" rx="6" fill="url(#gd)"/>
+<rect x="186" y="92" width="130" height="64" rx="14" fill="var(--bg)"/><rect x="200" y="106" width="50" height="8" rx="4" fill="var(--line)"/><rect x="200" y="124" width="64" height="16" rx="6" fill="url(#hd)"/>
+<g><rect class="bar" style="--i:0" x="52" y="230" width="26" height="70" rx="8" fill="url(#gd)"/><rect class="bar" style="--i:1" x="94" y="180" width="26" height="120" rx="8" fill="url(#hd)"/><rect class="bar" style="--i:2" x="136" y="205" width="26" height="95" rx="8" fill="url(#gd)"/><rect class="bar" style="--i:3" x="178" y="130" width="26" height="170" rx="8" fill="url(#hd)"/><rect class="bar" style="--i:4" x="220" y="160" width="26" height="140" rx="8" fill="url(#gd)"/><rect class="bar" style="--i:5" x="262" y="90" width="26" height="210" rx="8" fill="url(#hd)"/></g>
+<path d="M56 250C100 220 120 270 160 230S230 190 270 205 304 180 306 176" fill="none" stroke="var(--indigo)" stroke-width="3" stroke-linecap="round" opacity=".9"/>
+<line x1="44" y1="302" x2="316" y2="302" stroke="var(--line)"/><circle cx="300" cy="340" r="26" fill="none" stroke="var(--line)" stroke-width="8"/><circle cx="300" cy="340" r="26" fill="none" stroke="url(#gd)" stroke-width="8" stroke-linecap="round" stroke-dasharray="163" stroke-dashoffset="50" transform="rotate(-90 300 340)"/></svg><div class="glass g1"><b>5 trackers</b>Jira, Tempo, Slack, Trello, ClickUp</div><div class="glass g2"><b>Power BI</b>impact dashboards</div></div><div class="visual" data-cat="training" hidden><svg viewBox="0 0 360 420" role="img" aria-label="A grid of people dots lighting up"><defs><linearGradient id="gt" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--blue)"/><stop offset="1" stop-color="var(--indigo)"/></linearGradient><linearGradient id="ht" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--mint)"/><stop offset="1" stop-color="var(--blue)"/></linearGradient></defs><rect x="24" y="60" width="312" height="300" rx="28" fill="var(--surface)" stroke="var(--line)"/><circle class="pop" style="--i:0" cx="60" cy="110" r="15" fill="url(#gt)"/><circle class="pop" style="--i:1" cx="108" cy="110" r="15" fill="url(#ht)"/><circle class="pop" style="--i:2" cx="156" cy="110" r="15" fill="url(#ht)"/><circle cx="204" cy="110" r="11" fill="var(--line)"/><circle class="pop" style="--i:4" cx="252" cy="110" r="15" fill="url(#ht)"/><circle class="pop" style="--i:5" cx="300" cy="110" r="15" fill="url(#ht)"/><circle class="pop" style="--i:6" cx="60" cy="162" r="15" fill="url(#ht)"/><circle class="pop" style="--i:7" cx="108" cy="162" r="15" fill="url(#ht)"/><circle class="pop" style="--i:8" cx="156" cy="162" r="15" fill="url(#gt)"/><circle class="pop" style="--i:9" cx="204" cy="162" r="15" fill="url(#ht)"/><circle cx="252" cy="162" r="11" fill="var(--line)"/><circle class="pop" style="--i:11" cx="300" cy="162" r="15" fill="url(#gt)"/><circle class="pop" style="--i:12" cx="60" cy="214" r="15" fill="url(#ht)"/><circle class="pop" style="--i:13" cx="108" cy="214" r="15" fill="url(#gt)"/><circle class="pop" style="--i:14" cx="156" cy="214" r="15" fill="url(#ht)"/><circle class="pop" style="--i:15" cx="204" cy="214" r="15" fill="url(#ht)"/><circle class="pop" style="--i:16" cx="252" cy="214" r="15" fill="url(#gt)"/><circle cx="300" cy="214" r="11" fill="var(--line)"/><circle class="pop" style="--i:18" cx="60" cy="266" r="15" fill="url(#gt)"/><circle class="pop" style="--i:19" cx="108" cy="266" r="15" fill="url(#ht)"/><circle class="pop" style="--i:20" cx="156" cy="266" r="15" fill="url(#ht)"/><circle class="pop" style="--i:21" cx="204" cy="266" r="15" fill="url(#gt)"/><circle class="pop" style="--i:22" cx="252" cy="266" r="15" fill="url(#ht)"/><circle class="pop" style="--i:23" cx="300" cy="266" r="15" fill="url(#ht)"/><circle cx="60" cy="318" r="11" fill="var(--line)"/><circle class="pop" style="--i:25" cx="108" cy="318" r="15" fill="url(#ht)"/><circle class="pop" style="--i:26" cx="156" cy="318" r="15" fill="url(#gt)"/><circle class="pop" style="--i:27" cx="204" cy="318" r="15" fill="url(#ht)"/><circle class="pop" style="--i:28" cx="252" cy="318" r="15" fill="url(#ht)"/><circle class="pop" style="--i:29" cx="300" cy="318" r="15" fill="url(#gt)"/><rect x="108" y="372" width="144" height="10" rx="5" fill="var(--line)"/></svg><div class="glass g1"><b>2,000+</b>people trained</div><div class="glass g2"><b>Kenya</b>Ajira Digital</div></div><div class="visual" data-cat="proof" hidden><svg viewBox="0 0 360 420" role="img" aria-label="Shield with a check mark"><defs><linearGradient id="gr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--blue)"/><stop offset="1" stop-color="var(--indigo)"/></linearGradient><linearGradient id="hr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--mint)"/><stop offset="1" stop-color="var(--blue)"/></linearGradient></defs>
+<path d="M180 36l128 44v100c0 84-56 150-128 188C108 330 52 264 52 180V80z" fill="url(#gr)"/><path d="M180 36l128 44v100c0 84-56 150-128 188V36z" fill="#fff" opacity=".12"/>
+<path d="M120 200l44 44 80-96" fill="none" stroke="#fff" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="glass g1"><b>Evidence</b>behind every claim</div><div class="glass g2"><b>Estimates</b>labelled as such</div></div><div class="visual" data-cat="contact" hidden><svg viewBox="0 0 360 420" role="img" aria-label="Envelope with a paper plane"><defs><linearGradient id="gc" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--blue)"/><stop offset="1" stop-color="var(--indigo)"/></linearGradient><linearGradient id="hc" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--mint)"/><stop offset="1" stop-color="var(--blue)"/></linearGradient></defs>
+<rect x="40" y="150" width="280" height="190" rx="24" fill="var(--surface)" stroke="var(--line)"/><path d="M48 168l132 96 132-96" fill="none" stroke="url(#gc)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M236 70l78-34-30 100-26-38-40-6z" fill="url(#hc)"/><path d="M236 70l22 58" stroke="#fff" stroke-width="3" stroke-linecap="round"/><path class="dash" d="M70 120C110 90 160 100 205 78" fill="none" stroke="url(#gc)" stroke-width="3" stroke-linecap="round"/></svg><div class="glass g1"><b>US hours</b>working remotely</div><div class="glass g2"><b>Reply</b>within a day</div></div></div>
 </div>
 <script src="proof.js"></script>
-<script src="motion.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
