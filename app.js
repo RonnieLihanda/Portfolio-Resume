@@ -1,6 +1,6 @@
 (function(){
   var root=document.documentElement,reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var cats=['overview','automation','proposals','leadership','data','training','proof','contact'];
+  var cats=['overview','automation','solutions','proposals','leadership','data','training','proof','contact'];
   var titles={overview:'Hillary Lihanda | AI workflow automation and operations'};
   var links=[].slice.call(document.querySelectorAll('.nav a')),main=document.getElementById('main');
   function counts(sec){[].forEach.call(sec.querySelectorAll('[data-count]'),function(b){
@@ -29,6 +29,9 @@
     var i=links.indexOf(document.activeElement);if(i<0)return;
     if(e.key==='ArrowDown'||e.key==='ArrowRight'){e.preventDefault();links[(i+1)%links.length].focus()}
     if(e.key==='ArrowUp'||e.key==='ArrowLeft'){e.preventDefault();links[(i-1+links.length)%links.length].focus()}});
+  // solutions filter
+  var sf=document.getElementById('sol-filters');
+  if(sf)sf.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;[].forEach.call(sf.children,function(x){x.classList.remove('on')});b.classList.add('on');var g=b.getAttribute('data-g');[].forEach.call(document.querySelectorAll('details.sol'),function(d){d.hidden=!!g&&d.getAttribute('data-group')!==g})});
   // theme
   var saved=null;try{saved=localStorage.getItem('theme')}catch(e){}
   if(saved==='dark'||saved==='light')root.setAttribute('data-theme',saved);

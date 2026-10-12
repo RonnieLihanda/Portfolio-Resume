@@ -118,3 +118,38 @@ a.card:hover{transform:translateY(-3px);text-decoration:none;box-shadow:0 2px 4p
 .glass.g2{bottom:2%}
 @media (max-width:760px){.side nav{min-width:0;flex:1;overflow:hidden}.nav{overflow-x:auto}}
 @media (max-width:1180px){.visual{padding:64px 0}.glass.g1{top:0;left:0}.glass.g2{bottom:0;right:0}}
+
+/* solutions */
+.steps{list-style:none;padding:0;margin:0 0 8px;counter-reset:s}
+.steps li{counter-increment:s;position:relative;padding:12px 0 12px 46px;border-bottom:1px solid var(--line)}
+.steps li:last-child{border:0}
+.steps li::before{content:counter(s);position:absolute;left:0;top:12px;width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--indigo));color:#fff;display:grid;place-items:center;font-weight:700;font-size:.9rem}
+.sols{display:flex;flex-direction:column;gap:10px;margin:0 0 8px}
+details.sol{background:var(--surface);border-radius:20px;box-shadow:var(--shadow);overflow:hidden}
+details.sol[hidden]{display:none}
+details.sol summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;padding:16px 20px}
+details.sol summary::-webkit-details-marker{display:none}
+details.sol summary:hover{background:var(--line)}
+details.sol .n{font-weight:700;color:var(--blue);font-variant-numeric:tabular-nums;font-size:.95rem}
+details.sol .t b{display:block;font-size:1.02rem;letter-spacing:-.01em;line-height:1.25}
+details.sol .t em{font-style:normal;color:var(--muted);font-size:.84rem}
+.chip.soft{background:var(--line);color:var(--muted)}
+.sol-body{padding:4px 22px 22px;border-top:1px solid var(--line)}
+.sol-body p{max-width:none;margin:16px 0 0;font-size:.98rem}
+.flow4{list-style:none;margin:18px 0 6px;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:22px}
+.flow4 li{position:relative;background:var(--bg);border-radius:14px;padding:12px;font-size:.84rem;line-height:1.25;opacity:0}
+details[open] .flow4 li{animation:rise .55s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i)*.18s + .1s)}
+.flow4 .k{display:block;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--blue);margin-bottom:6px}
+.flow4 b{display:block;font-size:.92rem;margin-bottom:3px}
+.flow4 .s{color:var(--muted);font-size:.78rem}
+.flow4 li:not(:last-child)::after{content:"";position:absolute;right:-22px;top:50%;width:22px;height:2px;background:repeating-linear-gradient(90deg,var(--blue) 0 5px,transparent 5px 9px);background-size:18px 2px;animation:run 1s linear infinite}
+@keyframes run{to{background-position:18px 0}}
+.sol-body .chips{margin-top:14px}
+.sol-body .chips li{font-size:.8rem;padding:4px 11px;box-shadow:none;background:var(--bg)}
+@media (max-width:760px){
+  details.sol summary{grid-template-columns:auto 1fr;padding:14px}details.sol .chip{display:none}
+  details.sol summary .chip{grid-column:2;justify-self:start}
+  .flow4{grid-template-columns:1fr;gap:22px}
+  .flow4 li:not(:last-child)::after{right:auto;left:50%;top:auto;bottom:-22px;width:2px;height:22px;background:repeating-linear-gradient(180deg,var(--blue) 0 5px,transparent 5px 9px);animation:none}
+  .sol-body{padding:4px 16px 18px}
+}

@@ -6,6 +6,8 @@ var FALLBACK = [
  {id:"02",capability:"Proposals",title:"Claude skills and agents for RFP responses",result:"About a week down to about two days per response, across 30+ responses (estimate)",status:"In use",page:"case-claude-skills.html"},
  {id:"03",capability:"Leadership",title:"Leading delivery and proposal teams",result:"Data, web development and testing teams, plus proposal and AI automation teams",status:"In use",page:"team-leadership.html"},
  {id:"04",capability:"Data",title:"Reporting and dashboards from work trackers",result:"Jira, Tempo, Slack, Trello, ClickUp and Power BI",status:"In use",page:"data-dashboards.html"},
+ {id:"06",capability:"Proposals",title:"RFP scouting and tracking system",result:"Scouts Sam.gov, FindRFP and other sources, updates Trello, notifies the manager",status:"In use",page:"#solutions"},
+ {id:"07",capability:"Automation",title:"Hiring funnel model",result:"Google Sheets connected to hiring sites, tracking every stage",status:"In use",page:"#solutions"},
  {id:"05",capability:"Training",title:"AI and automation training",result:"More than 2,000 young people trained in Kenya",status:"Delivered",page:"training.html"}
 ];
 function parseCSV(t){var r=[],row=[],f="",q=false,i,c;for(i=0;i<t.length;i++){c=t[i];if(q){if(c=='"'){if(t[i+1]=='"'){f+='"';i++}else q=false}else f+=c}else if(c=='"')q=true;else if(c==","){row.push(f);f=""}else if(c=="\n"||c=="\r"){if(c=="\r"&&t[i+1]=="\n")i++;row.push(f);f="";if(row.join("")!=="")r.push(row);row=[]}else f+=c}
