@@ -1,6 +1,6 @@
 (function(){
   var root=document.documentElement,reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var cats=['overview','automation','solutions','proposals','leadership','knowledge','data','training','proof','contact'];
+  var cats=['overview','automation','solutions','proposals','leadership','knowledge','onboarding','data','training','proof','contact'];
   var titles={overview:'Hillary Lihanda | AI workflow automation and operations'};
   var links=[].slice.call(document.querySelectorAll('.nav a')),main=document.getElementById('main');
   function counts(sec){[].forEach.call(sec.querySelectorAll('[data-count]'),function(b){
@@ -35,6 +35,9 @@
   // knowledge demo
   var kq=document.getElementById('kd-q');
   if(kq)kq.addEventListener('input',function(){var v=kq.value.trim().toLowerCase(),n=0;[].forEach.call(document.querySelectorAll('#kd-list li'),function(li){var ok=!v||li.getAttribute('data-t').indexOf(v)>-1;li.hidden=!ok;if(ok)n++});var em=document.getElementById('kd-empty');if(em)em.hidden=n>0});
+  // onboarding stages
+  var os=document.getElementById('onb-stages');
+  if(os)os.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;[].forEach.call(os.children,function(x){x.classList.remove('on')});b.classList.add('on');var k=b.getAttribute('data-s');[].forEach.call(document.querySelectorAll('.ostage'),function(p){p.hidden=p.getAttribute('data-s')!==k})});
   // theme
   var saved=null;try{saved=localStorage.getItem('theme')}catch(e){}
   if(saved==='dark'||saved==='light')root.setAttribute('data-theme',saved);
