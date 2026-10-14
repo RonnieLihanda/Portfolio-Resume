@@ -1,0 +1,547 @@
+{
+  "name": "New starter onboarding (form to folder, tracker, emails, reminders)",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "New starter onboarding",
+        "formDescription": "Submit this once an offer is accepted. It sets up the folder, checklist, tracker and welcome emails.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Full name",
+              "fieldType": "text",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Personal email",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Role",
+              "fieldType": "text",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Department",
+              "fieldType": "dropdown",
+              "requiredField": true,
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Finance"
+                  },
+                  {
+                    "option": "Programs"
+                  },
+                  {
+                    "option": "Operations"
+                  },
+                  {
+                    "option": "HR"
+                  },
+                  {
+                    "option": "Other"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Start date",
+              "fieldType": "date",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Manager email",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Buddy email (optional)",
+              "fieldType": "email",
+              "requiredField": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "n1",
+      "name": "Onboarding form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": ""
+    },
+    {
+      "parameters": {
+        "jsCode": "// Edit this block for your organisation. Nothing else needs touching.\nreturn [{ json: {\n  orgName: 'Your Organisation',\n  parentFolderId: 'PASTE_DRIVE_FOLDER_ID_FOR_ONBOARDING_FOLDERS',\n  trackerSheetId: 'PASTE_GOOGLE_SHEET_ID_FOR_TRACKER',\n  hrEmail: 'hr@example.com',\n  itEmail: 'it@example.com',\n  guideLink: 'https://example.com/how-we-work',\n  // due dates are business days from the start date (negative = before)\n  stages: [\n    { name: 'Before day 1', offset: -3, tasks: [\n      ['Send the welcome message and first-week plan', 'HR', true],\n      ['Create email, chat and tool accounts', 'IT', false],\n      ['Prepare equipment and workspace', 'IT', false],\n      ['Book the first-day meetings', 'Manager', false] ] },\n    { name: 'Day 1', offset: 0, tasks: [\n      ['Welcome call and team introductions', 'Manager', false],\n      ['Check every login works', 'New hire', false],\n      ['Read the one-page how-we-work guide', 'New hire', false],\n      ['Finish one small first task', 'Buddy', false] ] },\n    { name: 'Week 1', offset: 4, tasks: [\n      ['Role walkthrough with the written procedures', 'Manager', false],\n      ['Shadow a colleague on a real task', 'Buddy', false],\n      ['Complete required policy reading', 'New hire', false],\n      ['End-of-week check-in: what was unclear?', 'Manager', false] ] },\n    { name: 'Day 30', offset: 21, tasks: [\n      ['First real deliverable, reviewed with feedback', 'Manager', false],\n      ['30-day check-in against the written plan', 'Manager', false],\n      ['Give feedback on the onboarding itself', 'New hire', false] ] },\n    { name: 'Day 60 to 90', offset: 63, tasks: [\n      ['Own one process end to end', 'New hire', false],\n      ['Set goals for the next quarter', 'Manager', false],\n      ['90-day review', 'Manager', false] ] }\n  ],\n  // extra tasks added for a department (task, owner, stage index)\n  departmentTasks: {\n    'Finance': [['Grant finance system access and sign-off limits', 'IT', 0]],\n    'Programs': [['Schedule a field visit with a senior colleague', 'Manager', 2]]\n  }\n}}];\n"
+      },
+      "id": "n2",
+      "name": "Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = $('Config').first().json;\nconst f = $input.first().json;\nconst name = String(f['Full name'] || '').trim();\nconst personal = String(f['Personal email'] || '').trim();\nconst manager = String(f['Manager email'] || '').trim();\nconst buddy = String(f['Buddy email (optional)'] || '').trim();\nconst dept = String(f['Department'] || '').trim();\nconst role = String(f['Role'] || '').trim();\nconst start = new Date(f['Start date']);\nconst emailOk = s => /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(s);\nconst problems = [];\nif (!name) problems.push('Full name is missing');\nif (!emailOk(personal)) problems.push('Personal email is not valid');\nif (!emailOk(manager)) problems.push('Manager email is not valid');\nif (buddy && !emailOk(buddy)) problems.push('Buddy email is not valid');\nif (isNaN(start.getTime())) problems.push('Start date is not a valid date');\nif (problems.length) return [{ json: { valid: false, problems, name, manager, hrEmail: cfg.hrEmail } }];\nconst addBiz = (d, n) => { const r = new Date(d); const step = n < 0 ? -1 : 1; let left = Math.abs(n); while (left > 0) { r.setDate(r.getDate() + step); const w = r.getDay(); if (w !== 0 && w !== 6) left--; } return r; };\nconst iso = d => d.toISOString().slice(0, 10);\nconst ownerEmail = { 'HR': cfg.hrEmail, 'IT': cfg.itEmail, 'Manager': manager, 'Buddy': buddy || manager, 'New hire': personal };\nconst tasks = [];\ncfg.stages.forEach((st, si) => {\n  const list = st.tasks.slice();\n  (cfg.departmentTasks[dept] || []).forEach(t => { if (t[2] === si) list.push([t[0], t[1], false]); });\n  list.forEach(t => tasks.push({ starter: name, department: dept, stage: st.name, task: t[0], owner: t[1], ownerEmail: ownerEmail[t[1]], due: iso(addBiz(start, st.offset)), status: 'To do' }));\n});\nreturn [{ json: { valid: true, name, role, department: dept, start: iso(start), personal, manager, buddy, tasks } }];\n"
+      },
+      "id": "n3",
+      "name": "Prepare record",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "v",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "n4",
+      "name": "Form valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "operation": "create",
+        "name": "={{ $json.name }} - Onboarding",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Config').first().json.parentFolderId }}"
+        },
+        "options": {}
+      },
+      "id": "n5",
+      "name": "Create starter folder",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        880,
+        0
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "",
+          "name": "Google Drive"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rec = $('Prepare record').first().json;\nconst folder = $input.first().json;\nconst link = folder.webViewLink || (folder.id ? 'https://drive.google.com/drive/folders/' + folder.id : '');\nreturn rec.tasks.map(t => ({ json: { ...t, folderLink: link } }));\n"
+      },
+      "id": "n6",
+      "name": "Split into tasks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Config').first().json.trackerSheetId }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Tasks"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {}
+        },
+        "options": {}
+      },
+      "id": "n7",
+      "name": "Add to tracker sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1320,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = $('Config').first().json;\nconst rec = $('Prepare record').first().json;\nconst link = $('Split into tasks').first().json.folderLink;\nconst first = rec.name.split(' ')[0];\nconst sheetUrl = 'https://docs.google.com/spreadsheets/d/' + cfg.trackerSheetId;\nconst mine = o => rec.tasks.filter(t => t.owner === o);\nconst li = arr => '<ul>' + arr.map(t => '<li>' + t.task + ' (due ' + t.due + ')</li>').join('') + '</ul>';\nconst out = [];\nout.push({ json: { to: rec.personal, subject: 'Welcome to ' + cfg.orgName + ', ' + first,\n  html: '<p>Hi ' + first + ',</p><p>We are glad you are joining as ' + rec.role + ' on ' + rec.start + '. Your shared folder is here: <a href=\"' + link + '\">onboarding folder</a>. Please read <a href=\"' + cfg.guideLink + '\">how we work</a> before your first day.</p><p>Your tasks:</p>' + li(mine('New hire')) + '<p>If anything is unclear, reply to this email.</p>' } });\nout.push({ json: { to: rec.manager, subject: 'Onboarding started for ' + rec.name,\n  html: '<p>Onboarding for ' + rec.name + ' (' + rec.role + ', ' + rec.department + ') starts ' + rec.start + '.</p><p>Folder: <a href=\"' + link + '\">open</a>. Tracker: <a href=\"' + sheetUrl + '\">open</a>.</p><p>Your tasks:</p>' + li(mine('Manager')) } });\nif (rec.buddy) out.push({ json: { to: rec.buddy, subject: 'You are the buddy for ' + rec.name,\n  html: '<p>You have been named the onboarding buddy for ' + rec.name + '.</p><p>Your tasks:</p>' + li(mine('Buddy')) } });\nout.push({ json: { to: cfg.itEmail, subject: 'Accounts needed for ' + rec.name + ' by ' + rec.tasks.find(t => t.owner === 'IT').due,\n  html: '<p>Please create accounts and prepare equipment for ' + rec.name + ' (' + rec.role + ', ' + rec.department + '), starting ' + rec.start + '.</p>' + li(mine('IT')) } });\nreturn out;\n"
+      },
+      "id": "n8",
+      "name": "Build emails",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "message": "={{ $json.html }}",
+        "options": {}
+      },
+      "id": "n9",
+      "name": "Send onboarding emails",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1760,
+        0
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const f = $input.first().json;\nreturn [{ json: { to: f.hrEmail, subject: 'Onboarding form needs fixing', html: '<p>The onboarding form for ' + (f.name || 'a new starter') + ' could not be processed:</p><ul>' + f.problems.map(p => '<li>' + p + '</li>').join('') + '</ul><p>Please resubmit the form.</p>' } }];\n"
+      },
+      "id": "n10",
+      "name": "Explain form problem",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "message": "={{ $json.html }}",
+        "options": {}
+      },
+      "id": "n11",
+      "name": "Email HR about the problem",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1100,
+        200
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "n12",
+      "name": "Every weekday 8am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { trackerSheetId: 'PASTE_GOOGLE_SHEET_ID_FOR_TRACKER', windowDays: 7 } }];\n"
+      },
+      "id": "n13",
+      "name": "Reminder settings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.trackerSheetId }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Tasks"
+        },
+        "options": {}
+      },
+      "id": "n14",
+      "name": "Read tracker sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        440,
+        420
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const win = $('Reminder settings').first().json.windowDays;\nconst today = new Date(); today.setHours(0, 0, 0, 0);\nconst groups = {};\nfor (const it of $input.all()) {\n  const r = it.json;\n  if (!r.task || String(r.status).toLowerCase() === 'done' || !r.ownerEmail || !r.due) continue;\n  const due = new Date(r.due); if (isNaN(due.getTime())) continue;\n  const late = Math.round((today - due) / 86400000);\n  if (late < 0 || late > win) continue;\n  (groups[r.ownerEmail] = groups[r.ownerEmail] || []).push({ ...r, late });\n}\nreturn Object.keys(groups).map(to => {\n  const rows = groups[to].sort((a, b) => b.late - a.late);\n  const li = rows.map(r => '<li>' + r.starter + ': ' + r.task + (r.late > 0 ? ' (overdue by ' + r.late + ' days)' : ' (due today)') + '</li>').join('');\n  return { json: { to, subject: 'Onboarding: ' + rows.length + ' task' + (rows.length > 1 ? 's' : '') + ' need you', html: '<p>These onboarding tasks are due or overdue:</p><ul>' + li + '</ul><p>Please do them and mark them Done in the tracker.</p>' } };\n});\n"
+      },
+      "id": "n15",
+      "name": "Find due and overdue tasks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "message": "={{ $json.html }}",
+        "options": {}
+      },
+      "id": "n16",
+      "name": "Send reminders",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        880,
+        420
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Gmail"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Onboarding form": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Prepare record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare record": {
+      "main": [
+        [
+          {
+            "node": "Form valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create starter folder": {
+      "main": [
+        [
+          {
+            "node": "Split into tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split into tasks": {
+      "main": [
+        [
+          {
+            "node": "Add to tracker sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add to tracker sheet": {
+      "main": [
+        [
+          {
+            "node": "Build emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build emails": {
+      "main": [
+        [
+          {
+            "node": "Send onboarding emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Explain form problem": {
+      "main": [
+        [
+          {
+            "node": "Email HR about the problem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every weekday 8am": {
+      "main": [
+        [
+          {
+            "node": "Reminder settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reminder settings": {
+      "main": [
+        [
+          {
+            "node": "Read tracker sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read tracker sheet": {
+      "main": [
+        [
+          {
+            "node": "Find due and overdue tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find due and overdue tasks": {
+      "main": [
+        [
+          {
+            "node": "Send reminders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Form valid?": {
+      "main": [
+        [
+          {
+            "node": "Create starter folder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Explain form problem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

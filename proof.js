@@ -8,6 +8,7 @@ var FALLBACK = [
  {id:"04",capability:"Data",title:"Reporting and dashboards from work trackers",result:"Jira, Tempo, Slack, Trello, ClickUp and Power BI",status:"In use",page:"data-dashboards.html"},
  {id:"06",capability:"Proposals",title:"RFP scouting and tracking system",result:"n8n workflow: searches Sam.gov, scores fit, Claude screens, creates Trello cards, emails the manager",status:"Built, in testing",page:"#solutions",download:"downloads/04_RFP_Scout_Sam_to_Trello.json"},
  {id:"07",capability:"Automation",title:"Hiring funnel model",result:"Google Sheets connected to hiring sites, tracking every stage",status:"In use",page:"#solutions"},
+ {id:"08",capability:"Automation",title:"New starter onboarding workflow",result:"n8n workflow: one form creates a folder, dated checklist and tracker, emails everyone and chases overdue tasks",status:"Built, in testing",page:"#onboarding",download:"downloads/05_Onboarding_Starter_Setup.json"},
  {id:"05",capability:"Training",title:"AI and automation training",result:"More than 2,000 young people trained in Kenya",status:"Delivered",page:"training.html"}
 ];
 function parseCSV(t){var r=[],row=[],f="",q=false,i,c;for(i=0;i<t.length;i++){c=t[i];if(q){if(c=='"'){if(t[i+1]=='"'){f+='"';i++}else q=false}else f+=c}else if(c=='"')q=true;else if(c==","){row.push(f);f=""}else if(c=="\n"||c=="\r"){if(c=="\r"&&t[i+1]=="\n")i++;row.push(f);f="";if(row.join("")!=="")r.push(row);row=[]}else f+=c}
