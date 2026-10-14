@@ -173,3 +173,19 @@ details[open] .flow4 li{animation:rise .55s cubic-bezier(.2,.7,.2,1) both;animat
 .sop dd{margin:0}
 .ostage[hidden]{display:none}
 @media(max-width:760px){.sop dl div{grid-template-columns:1fr;gap:2px}}
+
+.leadbox{background:var(--surface);border-radius:20px;padding:22px;box-shadow:var(--shadow)}
+.leadbox h2{margin:0 0 4px;font-size:1.25rem}
+.leadbox>p{margin:0 0 16px;color:var(--muted)}
+.fld{margin:0 0 14px;border:0;padding:0;min-width:0}
+.fld label,.fld legend{display:block;font-weight:600;font-size:.92rem;margin:0 0 6px;padding:0}
+.fld label span,.fld legend span{font-weight:400;color:var(--muted);font-size:.8rem}
+.fld input,.fld select,.fld textarea{width:100%;box-sizing:border-box;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:12px;padding:12px 14px;font:inherit}
+.fld input:focus,.fld select:focus,.fld textarea:focus{outline:2px solid var(--blue);outline-offset:1px}
+.checks{display:flex;flex-wrap:wrap;gap:8px}
+.checks label{display:inline-flex;align-items:center;gap:6px;font-weight:500;background:var(--bg);border:1px solid var(--line);border-radius:99px;padding:7px 12px;margin:0;cursor:pointer}
+.checks input{width:auto;margin:0}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.leadbox .fine{font-size:.85rem;color:var(--muted);margin-left:8px}
+.note.ok{color:#1a7f37}
+@media(max-width:760px){.leadbox{padding:16px}.leadbox .fine{display:block;margin:10px 0 0}}
