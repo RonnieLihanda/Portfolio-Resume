@@ -189,3 +189,8 @@ details[open] .flow4 li{animation:rise .55s cubic-bezier(.2,.7,.2,1) both;animat
 .leadbox .fine{font-size:.85rem;color:var(--muted);margin-left:8px}
 .note.ok{color:#1a7f37}
 @media(max-width:760px){.leadbox{padding:16px}.leadbox .fine{display:block;margin:10px 0 0}}
+.shots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:18px 0}
+.shots figure{margin:0;background:var(--card,rgba(127,127,127,.08));border:1px solid rgba(127,127,127,.25);border-radius:14px;padding:10px;overflow:hidden}
+.shots img{width:100%;height:auto;display:block;border-radius:8px}
+.shots figcaption{font-size:14px;line-height:1.4;margin-top:8px;opacity:.85}
+@media(max-width:700px){.shots{grid-template-columns:1fr}}
